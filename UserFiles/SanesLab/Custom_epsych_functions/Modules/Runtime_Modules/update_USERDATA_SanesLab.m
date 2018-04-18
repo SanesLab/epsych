@@ -14,6 +14,7 @@ function update_USERDATA_SanesLab(Next_trial_type,NextTrialID,TRIALS)
 %
 %Written by ML Caras 7.22.2016.
 %Updated by KP 11.4.2016. (param WAV/MAT compatibility)
+%Updated by ML Caras 4.6.2018 (synapse compatibility)
 
 global ROVED_PARAMS USERDATA RUNTIME
 
@@ -45,9 +46,12 @@ for i = 1:numel(ROVED_PARAMS)
             %Update USERDATA
             if RUNTIME.UseOpenEx
                 %Make sure param name compatible           %kp
-                strstart = length(h.module)+2;
-                variableStr = variable(strstart:end);
-                variableStr(strncmp(variableStr,'~',1))='';
+%                 strstart = length(h.module)+2;
+%                 variableStr = variable(strstart:end);
+%                 variableStr(strncmp(variableStr,'~',1))='';
+                
+                variableStr = variable(regexp(variable,'\.')+1:end); %mlc
+
                 
                 eval(['USERDATA.' variableStr '= TRIALS.trials{NextTrialID,ind};'])
             else

@@ -4,7 +4,7 @@ function AX = ReferencePhys_SanesLab(handles,AX)
 %Custom function for SanesLab epsych
 %
 %This function performs the calculations necessary for the common signal
-%averaging for multi-channel recordings. 
+%averaging for multi-channel recordings.
 %
 %Inputs:
 %   handles: GUI handles structure
@@ -52,28 +52,96 @@ function AX = ReferencePhys_SanesLab(handles,AX)
 % [-1/4 3/4 -1/4 -1/4 0 ... 0]
 %
 %
-%For more information see Ludwig et al. (2009) J Neurophys 101(3):1679-89 
+%For more information see Ludwig et al. (2009) J Neurophys 101(3):1679-89
 %
 %Inputs:
 %   handles: GUI handles structure
 %
 %
-%Written by ML Caras 7.28.2016. Updated 2.20.18.
+%Written by ML Caras 7.28.2016.
+%Updated 2.20.18.
+%Updated 4.12.18 (Synapse compatibility)
+
+global SYN_STATUS
 
 
-%Find the index of the physiology device
-h = findModuleIndex_SanesLab('Phys', handles);
-
-%Find the number of channels in the circuit via a parameter tag
-n = AX.GetTargetVal([h.module,'.nChannels']);
-
-if n == 0
-    n = 16; %Default to 16 channel recording if no param tag, and
-    vprintf(0,'Number of recording channels is not defined in RPVds circuit. \nSet to default (16).')
+%If we're running synapse
+if isempty(SYN_STATUS)
+    
+    %Look through each gizmo
+    gizmos = AX.getGizmoNames();
+    
+    %Find the gizmo with the WeightMatrix parameter tag
+    for i = 1:numel(gizmos)
+        gizmo = gizmos{i};
+        params = AX.getParameterNames(gizmo);
+        
+        if any(~cellfun('isempty',strfind(params,'WeightMatrix')));
+            chk = 1;
+            break;
+        end
+        
+    end
+    
+    %If we found the gizmo, continue. Otherwise, return to invoking
+    %function, and warn user
+    if ~chk
+        warning('WARNING: Unable to find common average referencing gizmo. Check Synapse processing tree.')
+        return
+    end
+    
+    %Find the number of channels in the circuit
+    n = AX.getParameterValue(gizmo,'nChannels');
+    
+    %Prompt user to identify bad channels
+    bad_channels = getBadChannels(n);
+    
+    %Create Weight Matrix
+    WeightMatrix = createWeightMatrix(n,bad_channels);
+    
+    %Send value to Synapse Gizmo
+    %Note: For sending arrays to Synapse, must use the plural version of 
+    %the command: setParameterValues (not SetParameterValue)
+    AX.setParameterValues(gizmo,'WeightMatrix',WeightMatrix);
+    
+    
+%If we're not running synapse
+else
+    %Find the index of the physiology device
+    h = findModuleIndex_SanesLab('Phys', handles);
+    
+    %Find the number of channels in the circuit via a parameter tag
+    n = AX.GetTargetVal([h.module,'.nChannels']);
+    
+    if n == 0
+        n = 16; %Default to 16 channel recording if no param tag, and
+        vprintf(0,'Number of recording channels is not defined in RPVds circuit. \nSet to default (16).')
+    end
+    
+    
+    %Prompt user to identify bad channels    
+    bad_channels = getBadChannels(n);
+    
+    if ~isempty(bad_channels)
+        
+        %Create Weight Matrix
+        WeightMatrix = createWeightMatrix(n,bad_channels);
+        
+        %Send to RPVds
+        AX.WriteTargetVEX([h.module,'.WeightMatrix'],0,'F32',WeightMatrix);
+        %verify = AX.ReadTargetVEX('Phys.WeightMatrix',0, 256,'F32','F64');
+    end
+    
 end
 
 
-%Prompt user to identify bad channels
+
+
+
+
+
+function bad_channels = getBadChannels(n)
+
 channelList = cellstr(num2str([1:n]'))';
 
 header = 'Select bad channels. Hold Cntrl to select multiple channels.';
@@ -83,35 +151,31 @@ bad_channels = listdlg('ListString',channelList,'InitialValue',8,...
     'SelectionMode','multiple','ListSize',[300,300]) %#ok<NOPRT>
 
 
-if ~isempty(bad_channels)
-    %Calculate weight for non-identical pairs
-    weight = -1/(n - numel(bad_channels) - 1);
+function WeightMatrix = createWeightMatrix(n,bad_channels)
+
+%Calculate weight for non-identical pairs
+weight = -1/(n - numel(bad_channels) - 1);
+
+%Initialize weight matrix
+WeightMatrix = repmat(weight,n,n);
+
+%The weights of all bad channels are 0.
+WeightMatrix(:,bad_channels) = 0;
+
+%Do not perform averaging on bad channels: leave as is.
+WeightMatrix(bad_channels,:) = 0;
+
+%For each channel
+for i = 1:n
     
-    %Initialize weight matrix
-    WeightMatrix = repmat(weight,n,n);
+    %Its own weight is 1
+    WeightMatrix(i,i) = 1;
     
-    %The weights of all bad channels are 0.
-    WeightMatrix(:,bad_channels) = 0;
-    
-    %Do not perform averaging on bad channels: leave as is.
-    WeightMatrix(bad_channels,:) = 0;
-    
-    %For each channel
-    for i = 1:n
-        
-        %Its own weight is 1
-        WeightMatrix(i,i) = 1;
-        
-    end
-    
-    
-    
-    %Reshape matrix into single row for RPVds compatibility
-    WeightMatrix =  reshape(WeightMatrix',[],1);
-    WeightMatrix = WeightMatrix';
-    
-    
-    %Send to RPVds
-    AX.WriteTargetVEX([h.module,'.WeightMatrix'],0,'F32',WeightMatrix);
-    %verify = AX.ReadTargetVEX('Phys.WeightMatrix',0, 256,'F32','F64');
 end
+
+
+
+%Reshape matrix into single row for RPVds compatibility
+WeightMatrix =  reshape(WeightMatrix',[],1);
+WeightMatrix = WeightMatrix';
+

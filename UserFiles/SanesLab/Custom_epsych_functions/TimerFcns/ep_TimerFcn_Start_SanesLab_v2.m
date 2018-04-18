@@ -19,7 +19,7 @@ function RUNTIME = ep_TimerFcn_Start_SanesLab_v2(CONFIG, RUNTIME, AX)
 % Updated by ML Caras Aug 9 2016. 
 % Updated by KP Nov 4 2016. (param WAV/MAT compatibility)
 
-global FUNCS
+global FUNCS SYN_STATUS SYN
 
 % Make temporary directory in current folder for storing data during
 % runtime in case of a computer crash or Matlab error
@@ -54,6 +54,19 @@ for i = 1:RUNTIME.NSubjects
     
     RUNTIME.TRIALS(i).Subject = C.SUBJECT;    
     
+    
+        
+    %Add ephys field to subject structure if running Synapse
+    if RUNTIME.UseOpenEx && isempty(SYN_STATUS)
+        RUNTIME.TRIALS(i).Subject.ephys.user = SYN.getCurrentUser();
+        RUNTIME.TRIALS(i).Subject.ephys.subject = SYN.getCurrentSubject();
+        RUNTIME.TRIALS(i).Subject.ephys.experiment = SYN.getCurrentExperiment();
+        RUNTIME.TRIALS(i).Subject.ephys.tank = SYN.getCurrentTank();
+        RUNTIME.TRIALS(i).Subject.ephys.block = SYN.getCurrentBlock();
+    end
+    
+    
+    
     % Initialze required parameters genereated by behavior macros
     RUNTIME.RespCodeStr{i}  = sprintf('#RespCode~%d', RUNTIME.TRIALS(i).Subject.BoxID);
     RUNTIME.TrigStateStr{i} = sprintf('#TrigState~%d',RUNTIME.TRIALS(i).Subject.BoxID);
@@ -70,8 +83,8 @@ for i = 1:RUNTIME.NSubjects
     info.CompStartTimestamp = now;
     info.StartDate = strtrim(datestr(info.CompStartTimestamp,'mmm-dd-yyyy'));
     info.StartTime = strtrim(datestr(info.CompStartTimestamp,'HH:MM PM'));
-    [~, computer] = system('hostname'); info.Computer = strtrim(computer);
-    
+    [~, computer] = system('hostname'); info.Computer = strtrim(computer); 
+
     dfn = sprintf('RUNTIME_DATA_%s_Box_%02d_%s.mat',genvarname(RUNTIME.TRIALS(i).Subject.Name), ...
         RUNTIME.TRIALS(i).Subject.BoxID,datestr(now,'mmm-dd-yyyy'));
     RUNTIME.DataFile{i} = fullfile(RUNTIME.DataDir,dfn);

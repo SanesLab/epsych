@@ -12,19 +12,22 @@ function trial_type_ind =  findTrialTypeColumn_SanesLab(colnames)
 %   index specifying the TrialType Column
 %
 %Written by ML Caras 7.22.2016
+%Edit by ML Caras 4.6.2018
 
-global RUNTIME
+% global RUNTIME
+% 
+% %Find the name of the RZ6 module
+% h = findModuleIndex_SanesLab('RZ6',[]);
+% 
+% %Find the trial type column
+% if RUNTIME.UseOpenEx
+%     trial_type_ind = find(ismember(colnames,[h.module,'.TrialType']));
+% else
+%     trial_type_ind = find(ismember(colnames,'TrialType'));
+% end
 
-%Find the name of the RZ6 module
-h = findModuleIndex_SanesLab('RZ6',[]);
-
-%Find the trial type column
-if RUNTIME.UseOpenEx
-    trial_type_ind = find(ismember(colnames,[h.module,'.TrialType']));
-else
-    trial_type_ind = find(ismember(colnames,'TrialType'));
-end
-
+tc = cellfun(@(x) strfind(x,'TrialType'), colnames, 'UniformOutput', false);
+trial_type_ind = find(cell2mat(cellfun(@(x) ~isempty(x), tc, 'UniformOutput', false)));
 
 
 

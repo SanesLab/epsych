@@ -1,4 +1,4 @@
-function DA = TDT_SetupDA(varargin)
+function [DA,varargout] = TDT_SetupDA(varargin)
 % DA = TDT_SetupDA(tank);
 % DA = TDT_SetupDA(tank,server);
 % 
@@ -18,6 +18,7 @@ function DA = TDT_SetupDA(varargin)
 % 
 % A server name can be additionally specified.  Default server is 'local'
 %   ex: DA = TDT_SetupDA('DEMOTANK2','SomeServer');
+%
 % 
 % See also TDT_SetupTT, TDT_SetupRP
 % 
@@ -29,12 +30,19 @@ tank   = [];
 if nargin >= 1, tank   = varargin{1}; end
 if nargin == 2, server = varargin{2}; end
 
+
 h = findobj('Type','figure','-and','Name','ODevFig');
 if isempty(h)
     h = figure('Visible','off','Name','ODevFig');
 end
 
+%Decalre active X controls
 DA = actxcontrol('TDevAcc.X','parent',h);
 
 DA.ConnectServer(char(server));
 if ~isempty(tank),   DA.SetTankName(char(tank));     end
+
+
+
+
+

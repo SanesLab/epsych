@@ -27,6 +27,7 @@ function [go_indices,nogo_indices,varargout] = ...
 %
 %
 %Written by ML Caras 7.22.2016
+%Updated by ML Caras 4.6.2018
 
 
 
@@ -41,14 +42,17 @@ end
 %Next, identify all possible trials from the TRIALS structure
 all_trials = TRIALS.trials;
 
-h = findModuleIndex_SanesLab('RZ6',[]);
-strstart = length(h.module)+2;
+%h = findModuleIndex_SanesLab('RZ6',[]);
+%strstart = length(h.module)+2;
 
 if RUNTIME.UseOpenEx
-    all_cols = cellfun(@(x) x(strstart:end), TRIALS.writeparams, 'UniformOutput',false);
+    %all_cols = cellfun(@(x) x(strstart:end), TRIALS.writeparams, 'UniformOutput',false);
+    all_cols = cellfun(@(x) x(regexp(x,'\.')+1:end), TRIALS.writeparams, 'UniformOutput',false);
 else
     all_cols = TRIALS.writeparams;
 end
+
+
 
 
 %Then, restrict the cell array of all possible trials to include only those

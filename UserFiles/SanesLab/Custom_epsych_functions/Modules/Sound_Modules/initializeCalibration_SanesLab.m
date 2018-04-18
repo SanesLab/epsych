@@ -10,26 +10,37 @@ function handles = initializeCalibration_SanesLab(handles)
 %make a new selection.
 %
 %
-%Written by ML Caras 8.10.2016
+%Written by ML Caras 8.10.2016. Updated by ML Caras 4.11.2018
 
 
-global CONFIG RUNTIME AX
+global CONFIG RUNTIME AX SYN_STATUS
 
 calcheck = 0;
 loadtype = 0;
 
 %Define RZ6 Module
-if isempty(handles.module)
+if isempty(handles.module) || isempty(SYN_STATUS)
     flds = fields(CONFIG.PROTOCOL.MODULES);
     mod = flds{1};
-    handles.module = mod;               %kp 2016-12
     
+    %If we're not running synapse, you can update the handles for the
+    %module. Otherwise, leave it as is.
+    if ~isempty(SYN_STATUS)
+        handles.module = mod;               %kp 2016-12
+    end
+    
+    %Warning if we can't find the right module
     if numel(flds) ~= 1
         vprintf(0,'**WARNING: Problem identifying RZ6 module for calibration.**');
     end
+    
 else
+ 
+    %If the module is already defined, and we're not running synapse, use
+    %the predefined module
     mod = handles.module;
 end
+
 
 while calcheck == 0
     

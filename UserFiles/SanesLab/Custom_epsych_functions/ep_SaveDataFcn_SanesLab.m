@@ -7,6 +7,9 @@ function ep_SaveDataFcn_SanesLab(RUNTIME)
 % Daniel.Stolzberg@gmail.com 2014. 
 % Updated by ML Caras 2015.
 % Updated by KP 2016. Saves buffer files and associated ephys tank number.
+% Updated by ML Caras Apr 2018. Added Synapse compatibility.
+
+global SYN_STATUS
 
 datestr = date;
 %For each subject...
@@ -19,8 +22,8 @@ for i = 1:RUNTIME.NSubjects
     uiwait(h);
     
     %Default filename
-%     filename = ['D:\data\', ID,'_', datestr,'.mat'];
-    filename = ['G:\Data\', ID,'_', datestr,'.mat']; %No D-drive on 1016 computer; will update later (5/7/17 JDY)%
+    filename = ['D:\data\', ID,'_', datestr,'.mat'];
+    %filename = ['G:\Data\', ID,'_', datestr,'.mat']; %No D-drive on 1016 computer; will update later (5/7/17 JDY)%
     fn = 0;
     
     %Force the user to save the file
@@ -65,8 +68,11 @@ for i = 1:RUNTIME.NSubjects
         keyboard
     end
     
-    %Associate an Block number if ephys also
-    if RUNTIME.UseOpenEx
+    %Associate an Block number if ephys (but not using synapse). If we're
+    %running synapse, experimental info (user, experiment name, tank,
+    %block) are all automatically appended to the file at the beginning of
+    %the experiment.
+    if RUNTIME.UseOpenEx && ~isempty(SYN_STATUS)
         BLOCK = input('Please enter the ephys BLOCK number associated with this behavior file.\n','s');
         Info.epBLOCK = ['Block-' BLOCK];
     end

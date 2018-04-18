@@ -11,6 +11,7 @@ function [DA,TDT] = SetupDAexpt(tank)
 % 
 % TDT.tank
 % TDT.server
+%
 % 
 % 
 % See also, ReadDAtags, UpdateDAtags, TDT_GetDeviceInfo
@@ -37,8 +38,8 @@ end
 
 
 
-% Instantiate OpenDeveloper ActiveX control and select active tank
-DA = TDT_SetupDA(TDT.tank,TDT.server);
+% Instantiate OpenDeveloper ActiveX control, and select active tank
+[DA] = TDT_SetupDA(TDT.tank,TDT.server);
 
 
 % Update system state.  Note: System set to Preview or Record in timer

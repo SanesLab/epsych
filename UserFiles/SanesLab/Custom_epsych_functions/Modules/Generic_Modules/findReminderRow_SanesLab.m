@@ -10,19 +10,25 @@ function [remind_row,varargout] = findReminderRow_SanesLab(colnames,trials)
 %   trials: cell array of trial parameters 
 %
 %Written by ML Caras 7.22.2016
+%Updated by ML Caras 4.6.2018
 
 
-global RUNTIME
+%global RUNTIME
 
 %Find the name of the RZ6 module
-h = findModuleIndex_SanesLab('RZ6',[]);
+%h = findModuleIndex_SanesLab('RZ6',[]);
  
 %Find the column that specifies whether a trial (row) is a reminder trials
-if RUNTIME.UseOpenEx
-    remind_col = find(ismember(colnames,[h.module,'.Reminder']));
-else
-    remind_col = find(ismember(colnames,'Reminder'));
-end
+% if RUNTIME.UseOpenEx
+%     remind_col = find(ismember(colnames,[h.module,'.Reminder']));
+% else
+%     remind_col = find(ismember(colnames,'Reminder'));
+% end
+
+rc = cellfun(@(x) strfind(x,'Reminder'), colnames, 'UniformOutput', false);
+remind_col = find(cell2mat(cellfun(@(x) ~isempty(x), rc, 'UniformOutput', false)));
+
+
 
 if isempty(remind_col)
     warning('Warning: No reminder trial specified in protocol.')

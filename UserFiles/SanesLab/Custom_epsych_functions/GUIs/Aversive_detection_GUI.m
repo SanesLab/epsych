@@ -34,7 +34,7 @@ end
 
 %SET UP INITIAL GUI TEXT BEFORE GUI IS MADE VISIBLE
 function Aversive_detection_GUI_OpeningFcn(hObject, ~, handles, varargin)
-global GUI_HANDLES PERSIST AX AUTOSHOCK
+global GUI_HANDLES PERSIST AX AUTOSHOCK SYN SYN_STATUS
 
 %Start fresh
 GUI_HANDLES = [];
@@ -49,7 +49,17 @@ handles = findModuleIndex_SanesLab('RZ6', handles);
 %Initialize physiology settings for multi channel recording (if OpenEx)
 [handles,AX] = initializePhysiology_SanesLab(handles,AX);
 if strcmp(get(handles.ReferencePhys,'enable'),'on') %kp 11/2017
-    AX = ReferencePhys_SanesLab(handles,AX);
+    
+    %If we're not running synapse, update via open developer controls
+    if ~isempty(SYN_STATUS)
+        AX = ReferencePhys_SanesLab(handles,AX);
+        
+    %If we're running Synapse, update via Synapse API    
+    elseif isempty(SYN_STATUS)
+        SYN = ReferencePhys_SanesLab(handles,SYN);
+    end
+    
+    
 end
 
 %Setup Response History Table and Trial History Table
@@ -352,9 +362,13 @@ guidata(hObject,handles)
 
 %REFERENCE PHYSIOLOGY BUTTON
 function ReferencePhys_Callback(~, ~, handles)
-global AX
+global AX SYN_STATUS SYN
 
-AX = ReferencePhys_SanesLab(handles,AX);
+if ~isempty(SYN_STATUS)
+    AX = ReferencePhys_SanesLab(handles,AX);
+elseif isempty(SYN_STATUS)
+    SYN = ReferencePhys_SanesLab(handles,SYN);
+end
 
 %TRIAL FILTER SELECTION
 function TrialFilter_CellSelectionCallback(hObject, eventdata, handles)

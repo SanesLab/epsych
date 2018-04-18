@@ -28,6 +28,7 @@ function e = DAUpdateParams(DA,C)
 %
 % DJS 2013
 
+
 trial = C.trials(C.tidx,:);
 
 

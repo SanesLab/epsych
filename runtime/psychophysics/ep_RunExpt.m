@@ -2,7 +2,7 @@ function varargout = ep_RunExpt(varargin)
 % ep_RunExpt
 %
 % Run Psychophysics experiment with/without electrophysiology using OpenEx
-% 
+%
 % Daniel.Stolzberg@gmail.com 2014
 
 % Copyright (C) 2016  Daniel Stolzberg, PhD
@@ -15,11 +15,11 @@ function varargout = ep_RunExpt(varargin)
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @ep_RunExpt_OpeningFcn, ...
-                   'gui_OutputFcn',  @ep_RunExpt_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
+    'gui_Singleton',  gui_Singleton, ...
+    'gui_OpeningFcn', @ep_RunExpt_OpeningFcn, ...
+    'gui_OutputFcn',  @ep_RunExpt_OutputFcn, ...
+    'gui_LayoutFcn',  [] , ...
+    'gui_Callback',   []);
 if nargin && ischar(varargin{1})
     gui_State.gui_Callback = str2func(varargin{1});
 end
@@ -49,7 +49,7 @@ guidata(hObj, h);
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = ep_RunExpt_OutputFcn(~, ~, h) 
+function varargout = ep_RunExpt_OutputFcn(~, ~, h)
 varargout{1} = h.output;
 
 function ep_RunExpt_CloseRequestFcn(hObj,~) %#ok<DEFNU>
@@ -63,10 +63,10 @@ if strcmp(PRGMSTATE,'RUNNING')
     if isfield(RUNTIME,'TIMER') && timerfind('Name','PsychTimer')
         stop(RUNTIME.TIMER);
         delete(RUNTIME.TIMER);
-    end    
+    end
 end
 
-clear global PRGMSTATE CONFIG RUNTIME AX STATEID FUNCS
+clear global PRGMSTATE CONFIG RUNTIME AX SYN SYN_STATUS STATEID FUNCS
 
 delete(hObj)
 
@@ -75,8 +75,8 @@ delete(hObj)
 
 
 %%
-function ExptDispatch(hObj,h) 
-global PRGMSTATE CONFIG AX RUNTIME
+function ExptDispatch(hObj,h)
+global PRGMSTATE CONFIG AX RUNTIME SYN SYN_STATUS
 
 
 COMMAND = get(hObj,'String');
@@ -91,13 +91,13 @@ switch COMMAND
         fprintf('\n%s\n',repmat('~',1,50))
         
         RUNTIME = []; % start fresh
-
+        
         % Load protocols
         for i = 1:length(CONFIG)
             warning('off','MATLAB:dispatcher:UnresolvedFunctionHandle');
             load(CONFIG(i).protocol_fn,'protocol','-mat');
             warning('on','MATLAB:dispatcher:UnresolvedFunctionHandle');
-
+            
             CONFIG(i).PROTOCOL = protocol;
             
             [pn,fn] = fileparts(CONFIG(i).protocol_fn);
@@ -113,112 +113,253 @@ switch COMMAND
             end
         end
         
-        if CONFIG(1).PROTOCOL.OPTIONS.UseOpenEx
-             vprintf(0,'Experiment is designed for use with OpenEx')
-            [AX,TDT] = SetupDAexpt;
-            if isempty(AX) || ~isa(AX,'COM.TDevAcc_X'), return; end
-                        
-            vprintf(0,'Server:\t''%s''\nTank:\t''%s''\n', ...
-                TDT.server,TDT.tank)
+        
+        
+        %-------------------------------------------------
+        %-------------------------------------------------
+        %Check to see if we're running Synapse
+        %-------------------------------------------------
+        %-------------------------------------------------
+        [~,result] = system('tasklist/FI "imagename eq Synapse.exe"');
+        SYN_STATUS = strfind(result,'No tasks are running');
+        
+        %-------------------------------------------------
+        %Synapse is running
+        %-------------------------------------------------
+        if isempty(SYN_STATUS)
+            vprintf(0,'Experiment will be run with Synapse')
             
+            %Connect to the locally running Synapse
+            SYN = SynapseAPI();
             
-            RUNTIME.TDT = TDT_GetDeviceInfo(AX,false);
-            if isempty(RUNTIME.TDT)
-                vprintf(0,1,'Unable to communicate with OpenEx.  Make certain the correct OpenEx file is open.')
-                errordlg('Unable to communicate with OpenEx.  Make certain the correct OpenEx file is open.', ...
-                    'ep_RunExpt','modal')
+            %Switch Synapse into Standby Mode. Important to do this before
+            %creating an open developer active X control to talk to any
+            %hardware running in legacy mode.
+            SYN.setModeStr('Standby');
+            
+            %Create a hidden figure for active X controls
+            %(for operation in legacy mode)
+            ha = findobj('Type','figure','-and','Name','ODevFig');
+            if isempty(ha)
+                ha = figure('Visible','off','Name','ODevFig');
             end
-            RUNTIME.TDT.server = TDT.server;
-            RUNTIME.TDT.tank   = TDT.tank;
+            
+            %Create open developer active X controls and connect to server
+            %(for operation in legacy mode)
+            AX = actxcontrol('TDevAcc.X','parent',ha);
+            AX.ConnectServer('Local');
+            
+            %Get Device Names, RCX files, and Sampling rates
+            RUNTIME.TDT = TDT_GetDeviceInfo(AX,false);
+            
+            %Overwrite tag names using Synapse API. The previous call
+            %(TDT_GetDeviceInfo) uses open developer activeX controls to
+            %read parameter tags. These controls do not fully capture all
+            %parameter tags embedded within epsych's custom macros. Older
+            %RPVds activeX will fully penetrate the macros, but these
+            %controls can't be used at the same time as Synapse. Luckily,
+            %the Synapse API fully penetrates the macros and reads all
+            %tags.
+            RUNTIME = ReadSynapseTags(SYN,RUNTIME);
             
             
-            % Copy parameters to RUNTIME.TRIALS
+            %Find the module that's running in legacy mode
+            nMods = numel(RUNTIME.TDT.name);
+            
+            for m = 1:nMods
+                modInfo = SYN.getGizmoInfo(RUNTIME.TDT.name{m});
+                if strcmp(modInfo.cat,'Legacy')
+                    ind = m;
+                    break
+                end
+            end
+            
+            mod = RUNTIME.TDT.name{ind};
+            
+            
+            %Adjust parameter names for synapse compatibility
+            wp = CONFIG.PROTOCOL.COMPILED.writeparams;
+            rp = CONFIG.PROTOCOL.COMPILED.readparams;
+            
+            CONFIG.PROTOCOL.COMPILED.writeparams = correctTagsSyn(wp,mod);
+            CONFIG.PROTOCOL.COMPILED.readparams = correctTagsSyn(rp,mod);
+            
+            %Copy parameters to RUNTIME.TRIALS
             for i = 1:length(CONFIG)
                 C = CONFIG(i).PROTOCOL.COMPILED;
                 RUNTIME.TRIALS(i).readparams    = C.readparams;
                 RUNTIME.TRIALS(i).Mreadparams   = cellfun(@ModifyParamTag, ...
                     RUNTIME.TRIALS(i).readparams,'UniformOutput',false);
-                RUNTIME.TRIALS(i).writeparams   = C.writeparams; 
+                RUNTIME.TRIALS(i).writeparams   = C.writeparams;
                 RUNTIME.TRIALS(i).randparams    = C.randparams;
             end
-
-
-        else
-            vprintf(0,'Experiment is not using OpenEx')
-             
-            [AX,RUNTIME] = SetupRPexpt(CONFIG);
-            if isempty(AX), return; end
             
+        %-------------------------------------------------    
+        %If Synapse is not running
+        %-------------------------------------------------
+        else
+            
+            %-------------------------------------------------
+            %If protocol is designed for ephys
+            %-------------------------------------------------
+            if CONFIG(1).PROTOCOL.OPTIONS.UseOpenEx
+                vprintf(0,'Experiment is designed for use with OpenEx')
+                
+                
+                %Create an active X control that will interface with OpenEx
+                %and prompt user to select a tank. (Uses Open Developer)
+                [AX,TDT] = SetupDAexpt;
+                if isempty(AX) || ~isa(AX,'COM.TDevAcc_X'), return; end
+                
+                vprintf(0,'Server:\t''%s''\nTank:\t''%s''\n', ...
+                    TDT.server,TDT.tank)
+                
+                %Get Device Names, RCX files, and Sampling rates from OpenEx
+                RUNTIME.TDT = TDT_GetDeviceInfo(AX,false);
+                if isempty(RUNTIME.TDT)
+                    vprintf(0,1,'Unable to communicate with OpenEx.  Make certain the correct OpenEx file is open.')
+                    errordlg('Unable to communicate with OpenEx.  Make certain the correct OpenEx file is open.', ...
+                        'ep_RunExpt','modal')
+                end
+                
+                %Assign the server and tank names
+                RUNTIME.TDT.server = TDT.server;
+                RUNTIME.TDT.tank   = TDT.tank;
+                
+                
+                %Copy parameters to RUNTIME.TRIALS
+                for i = 1:length(CONFIG)
+                    C = CONFIG(i).PROTOCOL.COMPILED;
+                    RUNTIME.TRIALS(i).readparams    = C.readparams;
+                    RUNTIME.TRIALS(i).Mreadparams   = cellfun(@ModifyParamTag, ...
+                        RUNTIME.TRIALS(i).readparams,'UniformOutput',false);
+                    RUNTIME.TRIALS(i).writeparams   = C.writeparams;
+                    RUNTIME.TRIALS(i).randparams    = C.randparams;
+                end
+            
+            %-------------------------------------------------
+            %If the protocol is not designed for OpenEx
+            %-------------------------------------------------
+            else
+                vprintf(0,'Experiment is not using OpenEx')
+                
+                %Create an activeX control that can be used to control
+                %RPVds. (Does not Use Open Developer)
+                [AX,RUNTIME] = SetupRPexpt(CONFIG);
+                
+                if isempty(AX),
+                    return;
+                end
+            end
         end
+        %-------------------------------------------------
+        %-------------------------------------------------
+
         
         
+        
+        
+        
+        %-------------------------------------------------
+        %Identify the TDT modules defined in the protocol
+        %-------------------------------------------------
         for i = 1:length(CONFIG)
             modnames = fieldnames(CONFIG(i).PROTOCOL.MODULES);
             for j = 1:length(modnames)
                 RUNTIME.TRIALS(i).MODULES.(modnames{j}) = j;
-%                 modtype = RUNTIME.TDT.Module{ismember(RUNTIME.TDT.name,modnames{j})};
-%                 vprintf(1,['%2d. ''%s'' on %s module: ' ...
-%                            '<a href = "matlab: !explorer %s">%s</a>'], ...
-%                            i,modnames{j},modtype, ...
-%                            CONFIG(i).PROTOCOL.MODULES.PM2R_Control.RPfile, ...
-%                            CONFIG(i).PROTOCOL.MODULES.PM2R_Control.RPfile)
             end
         end
         
         pause(1);
         
-        
+        %-------------------------------------------------
+        %Define the type of experiment (behavior only or anything that
+        %involves ephys (and hence, OpenEx or Synapse)). Note: As of April
+        %2018, all ephys experiments, whether they're using Synapse or not,
+        %will be tagged here as if they are using OpenEx to allow circuits
+        %to run in Synapse in legacy mode. Moving forward, this legacy mode
+        %function will be gradually phased out. (ML Caras)
         RUNTIME.UseOpenEx = CONFIG(1).PROTOCOL.OPTIONS.UseOpenEx;
-        if RUNTIME.UseOpenEx, RUNTIME.TYPE = 'DA'; else RUNTIME.TYPE = 'RP'; end
-
-        
-       % Do stuff with parameter tags
-       RUNTIME.TDT.NumMods = length(RUNTIME.TDT.RPfile);
-       RUNTIME.TDT.triggers = cell(1,RUNTIME.TDT.NumMods);
-       for i = 1:RUNTIME.TDT.NumMods
-           if ismember(RUNTIME.TDT.Module{i},{'PA5','UNKNOWN'}) % PA5 is marked 'UNKNOWN' when using OpenDeveloper
-               RUNTIME.TDT.devinfo(i).tags = {'SetAtten'};
-               RUNTIME.TDT.devinfo(i).datatype = {'S'};
-               
-           elseif ~isempty(RUNTIME.TDT.RPfile{i})
-               [RUNTIME.TDT.devinfo(i).tags,RUNTIME.TDT.devinfo(i).datatype] = ReadRPvdsTags(RUNTIME.TDT.RPfile{i});
-               t = RUNTIME.TDT.devinfo(i).tags;
-               
-               % look for trigger tags starting with '!'
-               ind = cellfun(@(x) (x(1)=='!'),t);
-               if any(ind)
-                   if RUNTIME.UseOpenEx
-                       RUNTIME.TDT.triggers{i} = cellfun(@(a) ([RUNTIME.TDT.name{i} '.' a]),t(ind),'UniformOutput',false);
-                   else
-                       RUNTIME.TDT.triggers{i} = t(ind);
-                       RUNTIME.TDT.trigmods(i) = i;
-                   end
-               end
-           end
-           
-       end
-        
-       
-              
-
-
-
         if RUNTIME.UseOpenEx
-            switch COMMAND
-                case 'Preview', AX.SetSysMode(2);
-                case 'Run',     AX.SetSysMode(3);
-            end
-            vprintf(0,'System set to ''%s''',COMMAND)            
-            pause(1);
+            RUNTIME.TYPE = 'DA';
+        else
+            RUNTIME.TYPE = 'RP';
         end
-
-
-
-
-        RUNTIME.TIMER = CreateTimer(h.figure1);
+        
+        
+        %Do stuff with parameter tags
+        RUNTIME.TDT.NumMods = length(RUNTIME.TDT.RPfile);
+        RUNTIME.TDT.triggers = cell(1,RUNTIME.TDT.NumMods);
+        
+        %For each TDT module...
+        for i = 1:RUNTIME.TDT.NumMods
+            
+            %If Synapse is not running
+            if ~isempty(SYN_STATUS)
                 
+                %If the module is a PA5
+                if ismember(RUNTIME.TDT.Module{i},{'PA5','UNKNOWN'}) % PA5 is marked 'UNKNOWN' when using OpenDeveloper
+                    RUNTIME.TDT.devinfo(i).tags = {'SetAtten'};
+                    RUNTIME.TDT.devinfo(i).datatype = {'S'};
+                    
+                %If the module is not a PA5, and there's a circuit loaded
+                elseif ~isempty(RUNTIME.TDT.RPfile{i})
+                    
+                    %Read parameter tags using RPVds Active X Controls
+                    [RUNTIME.TDT.devinfo(i).tags,RUNTIME.TDT.devinfo(i).datatype] = ReadRPvdsTags(RUNTIME.TDT.RPfile{i});
+                end
+            end
+            
+            
+            t = RUNTIME.TDT.devinfo(i).tags;
+            
+            %Look for trigger tags starting with '!'
+            ind = cellfun(@(x) (x(1)=='!'),t);
+            if any(ind)
+                if RUNTIME.UseOpenEx
+                    RUNTIME.TDT.triggers{i} = cellfun(@(a) ([RUNTIME.TDT.name{i} '.' a]),t(ind),'UniformOutput',false);
+                else
+                    RUNTIME.TDT.triggers{i} = t(ind);
+                    RUNTIME.TDT.trigmods(i) = i;
+                end
+            end
+            
+        end
+        
+        
+        %If running synapse, set mode using Synapse API
+        if isempty(SYN_STATUS)
+            
+            switch COMMAND
+                case 'Run',
+                    SYN.setModeStr('Record')
+                case 'Preview'
+                    SYN.setModeStr('Preview')
+            end
+            
+            vprintf(0,'System set to ''%s''',COMMAND)
+            pause(1);
+            
+        else
+            
+            %If running Open Ex (but not Synapse)
+            if RUNTIME.UseOpenEx
+                switch COMMAND
+                    case 'Preview', AX.SetSysMode(2);
+                    case 'Run',     AX.SetSysMode(3);
+                end
+                vprintf(0,'System set to ''%s''',COMMAND)
+                pause(1);
+            end
+        end
+        
+        
+        
+        %Create trimer
+        RUNTIME.TIMER = CreateTimer(h.figure1);
+        
         start(RUNTIME.TIMER); % Begin Experiment
-               
+        
         
         set(h.figure1,'pointer','arrow'); drawnow
         
@@ -289,7 +430,7 @@ else
 end
 
 
-function PsychTimerRunTime(~,~,f) 
+function PsychTimerRunTime(~,~,f)
 global AX RUNTIME FUNCS
 
 if RUNTIME.UseOpenEx
@@ -405,7 +546,7 @@ hSetup = findobj(h.figure1,'-regexp','tag','^setup')';
 switch PRGMSTATE
     case 'NOCONFIG'
         STATEID = 0;
-    
+        
     case 'CONFIGLOADED'
         PRGMSTATE = 'READY';
         STATEID = 1;
@@ -430,9 +571,9 @@ switch PRGMSTATE
         
     case 'ERROR'
         STATEID = -1;
-        set([h.save_data,h.ctrl_run,h.ctrl_preview,hSetup],'Enable','on');     
+        set([h.save_data,h.ctrl_run,h.ctrl_preview,hSetup],'Enable','on');
 end
-    
+
 drawnow
 
 
@@ -590,7 +731,7 @@ boxids = 1:16;
 curboxids = [];
 curnames = {[]};
 if ~isempty(CONFIG) && ~isempty(CONFIG(1).SUBJECT)
-
+    
     for i = 1:length(CONFIG)
         curboxids(i) = CONFIG(i).SUBJECT.BoxID; %#ok<AGROW>
         curnames{i} = CONFIG(i).SUBJECT.Name;
@@ -761,12 +902,12 @@ if nargin == 1 || isempty(a)
     if isempty(a), return; end
     
 elseif nargin >= 2 && ischar(a) && strcmp(a,'default')
-        % hardcoded default functions
-        FUNCS.TIMERfcn.Start   = 'ep_TimerFcn_Start';
-        FUNCS.TIMERfcn.RunTime = 'ep_TimerFcn_RunTime';
-        FUNCS.TIMERfcn.Stop    = 'ep_TimerFcn_Stop';
-        FUNCS.TIMERfcn.Error   = 'ep_TimerFcn_Error';
-        return
+    % hardcoded default functions
+    FUNCS.TIMERfcn.Start   = 'ep_TimerFcn_Start';
+    FUNCS.TIMERfcn.RunTime = 'ep_TimerFcn_RunTime';
+    FUNCS.TIMERfcn.Stop    = 'ep_TimerFcn_Stop';
+    FUNCS.TIMERfcn.Error   = 'ep_TimerFcn_Error';
+    return
 end
 
 b = cellfun(@which,a,'UniformOutput',false);
@@ -886,7 +1027,7 @@ elseif nargin == 1 || isempty(a) || ~isfield(FUNCS,'AddSubjectFcn')
     a = inputdlg('Add Subject Fcn','Specify Custom Add Subject:',1, ...
         {FUNCS.AddSubjectFcn});
     AlwaysOnTop(h,ontop);
-
+    
     a = char(a);
     if isempty(a), return; end
 end
@@ -916,13 +1057,13 @@ if STATEID >= 4, return; end
 
 if nargin == 2 && ~isempty(a) && ischar(a) && strcmp(a,'default')
     a = 'ep_BoxFig';
-
+    
 elseif nargin == 1 || ~isfield(FUNCS,'BoxFig')
     if isempty(FUNCS.BoxFig)
         % hardcoded default function
         FUNCS.BoxFig = 'ep_BoxFig';
     end
-
+    
     
     ontop = AlwaysOnTop(h);
     AlwaysOnTop(h,false);
@@ -930,7 +1071,7 @@ elseif nargin == 1 || ~isfield(FUNCS,'BoxFig')
     a = inputdlg('Box Figure','Specify Custom Box Figure:',1, ...
         {FUNCS.BoxFig});
     AlwaysOnTop(h,ontop);
-
+    
     if isempty(a), return; end
     
     a = char(a);

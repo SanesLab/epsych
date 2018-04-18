@@ -40,9 +40,10 @@ end
 
 if isfield(RUNTIME.TDT,'name')
     handles.module = RUNTIME.TDT.name{handles.dev};
-else
+    
+elseif isfield(RUNTIME.TRIALS,'MODULES')
     mod = fieldnames(RUNTIME.TRIALS.MODULES);
-    handles.module = mod{1};
+    handles.module = mod{handles.dev};
 end
 
 end
