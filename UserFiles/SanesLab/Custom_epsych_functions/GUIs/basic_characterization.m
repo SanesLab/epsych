@@ -174,9 +174,15 @@ varargout{1} = handles.output;
 %REFERENCE PHYS
 function ReferencePhys_Callback(~, ~, handles) %#ok<*DEFNU>
 
-global G_DA
+global G_DA SYN_STATUS SYN
 
-G_DA = ReferencePhys_SanesLab(handles,G_DA);
+if ~isempty(SYN_STATUS)
+    G_DA = ReferencePhys_SanesLab(handles,G_DA);
+elseif isempty(SYN_STATUS)
+    SYN = ReferencePhys_SanesLab(handles,SYN);
+end
+
+
 
 %OPTOGENETIC TRIGGER
 function opto_button_panel_SelectionChangeFcn(hObject, eventdata, handles)
