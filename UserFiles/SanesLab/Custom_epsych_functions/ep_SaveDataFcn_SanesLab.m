@@ -22,8 +22,7 @@ for i = 1:RUNTIME.NSubjects
     uiwait(h);
     
     %Default filename
-    filename = ['D:\data\', ID,'_', datestr,'.mat'];
-    %filename = ['G:\Data\', ID,'_', datestr,'.mat']; %No D-drive on 1016 computer; will update later (5/7/17 JDY)%
+    filename = ['C:\DATA\', ID,'_', datestr,'.mat'];
     fn = 0;
     
     %Force the user to save the file
