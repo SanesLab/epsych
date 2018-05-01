@@ -164,6 +164,9 @@ norm_tag = TagName{normInd};
 
 %Set normalization value for calibation
 handles.RP.SetTagVal(norm_tag,handles.C.hdr.cfg.ref.norm);
+
+%Save the tags for later
+handles.tagnames = TagName;
 %--------------------------------------------------------
 
 
@@ -579,4 +582,16 @@ function handles = update(handles)
         set(handles.Duration,'ForegroundColor',[0 0 1]);
         set(handles.numberpellets,'ForegroundColor',[0 0 1]);
         
-  
+
+%AIR PUFF BUTTON
+function airpuff_Callback(hObject,~, handles)
+
+%Trigger Airpuff
+handles.RP.SetTagVal('AirPuff',1);
+v = handles.RP.GetTagVal('AirPuff')
+
+%Reset trigger
+handles.RP.SetTagVal('AirPuff',0);
+v = handles.RP.GetTagVal('AirPuff')
+
+guidata(hObject,handles)

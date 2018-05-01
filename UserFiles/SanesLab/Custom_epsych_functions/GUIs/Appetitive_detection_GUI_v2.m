@@ -301,6 +301,13 @@ handles = Remind_Callback_SanesLab(handles);
 
 guidata(hObject,handles)
 
+%AIR PUFF BUTTON
+function airpuff_Callback(hObject, ~, handles)
+
+handles = Airpuff_Callback_SanesLab(handles);
+
+guidata(hObject,handles)
+
 %REFERENCE PHYSIOLOGY BUTTON
 function ReferencePhys_Callback(~, ~, handles)
 global AX SYN_STATUS SYN
@@ -417,6 +424,9 @@ switch str{val}
         
 end
 %-----------------------------------------------------------
+
+
+
 
 
 

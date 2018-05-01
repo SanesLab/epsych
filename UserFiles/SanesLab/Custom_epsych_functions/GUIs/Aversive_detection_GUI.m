@@ -346,6 +346,13 @@ handles = Remind_Callback_SanesLab(handles);
 
 guidata(hObject,handles)
 
+%AIR PUFF BUTTON
+function airpuff_Callback(hObject,~, handles)
+
+handles = Airpuff_Callback_SanesLab(handles);
+
+guidata(hObject,handles)
+
 %DELIVER TRIALS BUTTON
 function DeliverTrials_Callback(hObject, ~, handles)
 
