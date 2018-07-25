@@ -55,7 +55,7 @@ for i = 1:RUNTIME.NSubjects
     RUNTIME.TRIALS(i).Subject = C.SUBJECT;    
     
     
-        
+    
     %Add ephys field to subject structure if running Synapse
     if RUNTIME.UseOpenEx && isempty(SYN_STATUS)
         RUNTIME.TRIALS(i).Subject.ephys.user = SYN.getCurrentUser();

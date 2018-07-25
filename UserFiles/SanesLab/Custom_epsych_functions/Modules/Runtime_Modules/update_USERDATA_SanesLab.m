@@ -51,7 +51,7 @@ for i = 1:numel(ROVED_PARAMS)
 %                 variableStr(strncmp(variableStr,'~',1))='';
                 
                 variableStr = variable(regexp(variable,'\.')+1:end); %mlc
-
+                variableStr(strncmp(variableStr,'~',1))='';
                 
                 eval(['USERDATA.' variableStr '= TRIALS.trials{NextTrialID,ind};'])
             else

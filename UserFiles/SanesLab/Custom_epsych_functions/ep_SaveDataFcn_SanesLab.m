@@ -62,6 +62,39 @@ for i = 1:RUNTIME.NSubjects
         
         Info.stimfns = stimfns;
         
+        %% Print average behavioral results
+        
+        % Retreive response code bits
+        bits = getBits_SanesLab;
+        bitmask = [Data.ResponseCode]';
+        HITind  = logical(bitget(bitmask,bits.hit));
+        MISSind = logical(bitget(bitmask,bits.miss));
+        CRind   = logical(bitget(bitmask,bits.cr));
+        FAind   = logical(bitget(bitmask,bits.fa));
+        
+        % Calculate hit rate
+        HitRate = sum(HITind)/(sum(HITind)+sum(MISSind));
+        
+        % Calculate dprime
+        CorrectedHitRate = HitRate;
+        CorrectedHitRate(HitRate > .99) = .99;
+        CorrectedHitRate(HitRate < .01) = .01;
+        zhit = sqrt(2)*erfinv(2*CorrectedHitRate-1);
+        
+        FArate = sum(FAind)/(sum(FAind)+sum(CRind));
+        FArate(FArate > .99) = .99;
+        FArate(FArate < .01) = .01;
+        
+        zfa = sqrt(2)*erfinv(2*FArate-1);
+        
+        dprime = zhit - zfa;
+        
+        % Print the results
+        fprintf('\nRESULTS\n  N GOs: %i \n  HR:    %i \n  d'':    %0.2f \n',...
+            sum(HITind)+sum(MISSind), round(HitRate*100), dprime);
+        
+        
+        
     end
     catch
         keyboard
@@ -82,6 +115,8 @@ for i = 1:RUNTIME.NSubjects
         Data(j).TrialID = j;
     end
     
+    
+    
     save(fileloc,'Data','Info')
     if exist(fileloc,'file')      %kp 2017-11 
         disp(['Data saved to ' fileloc])
@@ -89,6 +124,7 @@ for i = 1:RUNTIME.NSubjects
         warning('File not saved; try again!')
         keyboard
     end
+    
     
 end
 
