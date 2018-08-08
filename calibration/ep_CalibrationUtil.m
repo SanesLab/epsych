@@ -460,7 +460,7 @@ xlabel(fax,'Frequency (Hz)'); ylabel(fax,'dB (approx)'); title(fax,'Power Spectr
 
 % Calibration functions --------------------------
 function buffer = GetBuffer(AcqRP,Fs,bdur)
-% pause(0.02);
+% pause(0.2);
 
 if ~exist('bdur','var') || isempty(bdur) || bdur < 0.1
     bdur = 0.1;
@@ -509,6 +509,7 @@ cfg.Fs = Fs;
 
 % piston phone frequency = 250 Hz
 freq = getpref('CalibrationUtil','CALFREQ',250);
+pause(1) %kp (on some PCs, beginning portion of buffer is empty if no pause here)
 buffer = GetBuffer(AcqRP,Fs,1);
 
 buffer = FilterBuffer(buffer,Fs);
