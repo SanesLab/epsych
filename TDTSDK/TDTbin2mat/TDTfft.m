@@ -6,8 +6,8 @@ function [fft_data,varargout] = TDTfft(data, channel, varargin)
 %   fft_data    contains power spectrum array
 %   fft_freq    contains the frequency list (optional)
 %
-%   fft_data = TDTfft(DATA, CHANNEL,'parameter',value,...)
-%   [fft_data, fft_freq] = TDTfft(DATA, CHANNEL,'parameter',value,...)
+%   fft_data = TDTfft(DATA, CHANNEL, 'parameter', value,...)
+%   [fft_data, fft_freq] = TDTfft(DATA, CHANNEL, 'parameter', value,...)
 %
 %   'parameter', value pairs
 %      'PLOT'       boolean, set to false to disable figure
@@ -161,7 +161,7 @@ title(sprintf('Raw Signal (%.2f %srms)', r*factor, y_units))
 
 % plot single-sided amplitude spectrum
 subplot(numplots,1,2);
-plot(fft_freq, fft_data)
+semilogx(fft_freq, fft_data)
 title('Single-Sided Amplitude Spectrum of y(t)')
 xlabel('Frequency (Hz)')
 ylabel('|Y(f)|')
@@ -174,7 +174,7 @@ end
 % plot power spectrum
 subplot(numplots,1,3)
 fft_data = 20*log10(fft_data);
-plot(fft_freq, fft_data)
+semilogx(fft_freq, fft_data)
 title('Power Spectrum')
 xlabel('Frequency (Hz)')
 ylabel('dBV')

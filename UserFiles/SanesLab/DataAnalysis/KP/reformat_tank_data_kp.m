@@ -22,6 +22,8 @@ addpath helpers
 
 %Select tank
 switch computerName(1:6)
+    case 'newreg'
+        directoryname = uigetdir('C:\DATA\TDT_Tanks');
     case 'regina'
         directoryname = uigetdir('D:\data\KP','Select TANK');
         savedir = 'G:\NYUDrive\Sanes\DATADIR\AMJitter\RawData';

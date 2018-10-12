@@ -15,6 +15,8 @@ function update_USERDATA_SanesLab(Next_trial_type,NextTrialID,TRIALS)
 %Written by ML Caras 7.22.2016.
 %Updated by KP 11.4.2016. (param WAV/MAT compatibility)
 %Updated by ML Caras 4.6.2018 (synapse compatibility)
+%Updated by KP 07.2018. (post-synapse param WAV/MAT compatibility)
+
 
 global ROVED_PARAMS USERDATA RUNTIME
 

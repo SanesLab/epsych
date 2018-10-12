@@ -36,6 +36,7 @@ function data = TDTbin2mat(BLOCK_PATH, varargin)
 %      'NODATA'     boolean, only return timestamps, channels, and sort 
 %                       codes for snippets, no waveform data (default = false)
 %      'STORE'      string, specify a single store to extract
+%                   cell of strings, specify cell arrow of stores to extract
 %      'CHANNEL'    integer, choose a single channel, to extract from
 %                       stream or snippet events. Default is 0, to extract
 %                       all channels.
@@ -442,6 +443,14 @@ if ~useOutsideHeaders
         % check the codes first and build store maps and note arrays
         codes = heads(3,:);
         
+        goodCodes = codes > 0;
+        badCodes = ~goodCodes;
+        if sum(badCodes) > 0
+            warning('bad TSQ headers were written, removing %d, keeping %d headers', sum(badCodes), sum(goodCodes))
+            heads = heads(:, goodCodes);
+            codes = heads(3,:);
+        end
+        
         % find unique stores and a pointed to one of their headers
         sortedCodes = sort(codes);
         uniqueCodes = sortedCodes([true,diff(sortedCodes)>0]);
@@ -455,6 +464,7 @@ if ~useOutsideHeaders
         uniqueCodes = uniqueCodes(y);
         
         storeTypes = cell(1, numel(uniqueCodes));
+        ucf = cell(1, numel(uniqueCodes));
         goodStoreCodes = [];
         for x = 1:numel(uniqueCodes)
             if uniqueCodes(x) == EVMARK_STARTBLOCK || uniqueCodes(x) == EVMARK_STOPBLOCK
@@ -468,10 +478,33 @@ if ~useOutsideHeaders
             name = char(typecast(uniqueCodes(x), 'uint8'));
             
             % if looking for a particular store and this isn't it, skip it
-            if ~strcmp(STORE, '') && ~strcmp(STORE, name), continue; end
+            if iscell(STORE)
+                if all(~strcmp(STORE, name)), continue; end
+            else
+                if ~strcmp(STORE, '') && ~strcmp(STORE, name), continue; end
+            end
+            
+            bSkipDisabled = 0;
+            if ~isempty(fields(blockNotes))
+                for i = 1:numel(blockNotes)
+                    temp = blockNotes(i);
+                    if strcmp(temp.StoreName, name)
+                        if strcmp(temp.Enabled, '2')
+                            %disp([temp.StoreName ' STORE DISABLED'])
+                            bSkipDisabled = 1;
+                            break;
+                        end
+                    end
+                end
+            end
+            
+            if bSkipDisabled
+                continue
+            end
             
             varName = fixVarName(name);
             storeTypes{x} = code2type(heads(2,sortedCodes(x)));
+            ucf{x} = checkUCF(heads(2,sortedCodes(x)));
             
             % do store type filter here
             bUseStore = false;
@@ -517,6 +550,9 @@ if ~useOutsideHeaders
                     headerStruct.stores.(varName).type = heads(2,sortedCodes(x));
                     headerStruct.stores.(varName).typeStr = storeTypes{x};
                     headerStruct.stores.(varName).typeNum = find(strcmpi(ALLOWED_TYPES, storeTypes{x}));
+                    if strcmp(storeTypes{x}, 'streams')
+                        headerStruct.stores.(varName).ucf = ucf{x};
+                    end
                     if ~strcmp(storeTypes{x}, 'scalars')
                         headerStruct.stores.(varName).fs = double(typecast(heads(10,sortedCodes(x)), 'single'));
                     end
@@ -862,8 +898,17 @@ for ii = 1:numel(storeNames)
         if nchan > 1
             % organize data by sample
             ind = cell(1,nchan);
+            min_lengths = inf(1, nchan);
             for xx = 1:nchan
                 ind{xx} = find(headerStruct.stores.(currentName).chan == xx);
+                min_lengths(xx) = min(min_lengths(xx), size(ind{xx}, 2));
+            end
+            if numel(unique(min_lengths)) > 1
+                warning('truncating store %s to %d values (from %d)', currentName, min(min_lengths), max(min_lengths));
+                ml = min(min_lengths);
+                for xx = 1:nchan
+                    ind{xx} = ind{xx}(:,1:ml);
+                end
             end
             if ~NODATA
                 headerStruct.stores.(currentName).data = reshape(headerStruct.stores.(currentName).data([ind{:}]), [], nchan)';
@@ -1022,6 +1067,11 @@ for ii = 1:numel(storeNames)
             headerStruct.stores.(currentName) = d.(currentName);
             headerStruct.stores.(currentName).startTime = 0;
         else
+            % make sure SEV files are there if they are supposed to be
+            if headerStruct.stores.(currentName).ucf == 1
+                warning('Expecting SEV files for %s but none were found, skipping...', currentName)
+                continue
+            end
             headerStruct.stores.(currentName).data = cell(1,numRanges);
             for jj = 1:numRanges
                 fc = headerStruct.stores.(currentName).filteredChan{jj};
@@ -1267,6 +1317,12 @@ else
 end
 end
 
+function s = checkUCF(code)
+    %% given event code, return string 'epocs', 'snips', 'streams', or 'scalars'
+    global EVTYPE_UCF
+    s = bitand(code, EVTYPE_UCF) == EVTYPE_UCF;
+end
+
 function varname = fixVarName(name, varargin)
 if nargin == 1
     VERBOSE = 0;
@@ -1337,9 +1393,13 @@ for i = 1:length(lines)-1
 end
 
 % print out store information
-%for i = 1:storenum
-%    disp(blockNotes(i))
-%end
+% for i = 1:storenum
+%     temp = blockNotes(i);
+%     disp(temp.StoreName)
+%     if strcmp(temp.Enabled, '2')
+%         disp([temp.StoreName ' STORE DISABLED'])
+%     end
+% end
 end
 
 function data_snip = snip_maker(data_snip)

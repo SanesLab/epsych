@@ -156,6 +156,11 @@ G_DA.SetTargetVal([handles.module,'.Optostim'],0);
 set(handles.soundstatus_panel,'selectedobject',handles.sound_off);
 G_DA.SetTargetVal([handles.module,'.SoundStatus'],0);
 
+%Load in calibration file    ****PROGRAM SHOULD BE UPDATED TO THE NEW,
+%BETTER WAY OF DEALING WITH CALIBRATIONS (BUT NOT TRIVIAL BECAUSE OF TONE
+%AND NOISE CAL BOTH BEING USED HERE)
+% handles = initializeCalibration_SanesLab(handles);
+
 %Update handles structure
 guidata(hObject, handles);
 
