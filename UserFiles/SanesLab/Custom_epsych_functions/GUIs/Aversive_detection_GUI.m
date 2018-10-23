@@ -371,6 +371,8 @@ guidata(hObject,handles)
 function ReferencePhys_Callback(~, ~, handles)
 global AX SYN_STATUS SYN
 
+handles = TrialDelivery_Callback_SanesLab(handles,'off');
+
 if ~isempty(SYN_STATUS)
     AX = ReferencePhys_SanesLab(handles,AX);
 elseif isempty(SYN_STATUS)
