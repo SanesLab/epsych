@@ -93,6 +93,3 @@ end
     select_trial_SanesLab(initial_random_pick,...
     nogo_indices,go_indices,LastTrialID,remind_row,trial_type_ind,TRIALS,...
     varargin{1},Expected_prob,expect_indices,unexpect_indices,repeat_flag);
-
-
-

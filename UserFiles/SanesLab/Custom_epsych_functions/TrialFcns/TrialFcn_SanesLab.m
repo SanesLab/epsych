@@ -174,6 +174,35 @@ switch lower(FUNCS.BoxFig)
             trial_type_ind,LastTrialID,repeat_flag,...
             expectation_roved,expected_ind);
         
+     case 'afc_gui'
+        
+        %Find name of RZ6 module
+        h = findModuleIndex_SanesLab('RZ6', []);
+        
+        %Define name of expected parameter tag
+        if RUNTIME.UseOpenEx
+            expect_paramtag = [h.module,'.Expected'];
+        else
+            expect_paramtag = 'Expected';
+        end
+        
+        %Determine whether expectation is roved
+        expectation_roved = cell2mat(strfind(ROVED_PARAMS,expect_paramtag));
+        
+        if expectation_roved
+            expected_ind = find(ismember(TRIALS.writeparams,expect_paramtag));
+        else
+            expected_ind = [];
+        end
+       
+        
+        %Select the next trial for an appetitive paradigm
+        [NextTrialID,LastTrialID,Next_trial_type,repeat_flag] = ...
+            appetitive_trialselect_SanesLab_v2(TRIALS,remind_row,...
+            trial_type_ind,LastTrialID,repeat_flag,...
+            expectation_roved,expected_ind);
+               
+        
     case 'aversive_detection_gui'     
       
         %Select the next trial for an aversive paradigm
@@ -221,7 +250,8 @@ end
 
 
 %Update USERDATA Structure
-update_USERDATA_SanesLab(Next_trial_type,NextTrialID,TRIALS)
+% update_USERDATA_SanesLab(Next_trial_type,NextTrialID,TRIALS)
+update_USERDATA_SanesLab_v2(Next_trial_type,NextTrialID,TRIALS)
 
 
 

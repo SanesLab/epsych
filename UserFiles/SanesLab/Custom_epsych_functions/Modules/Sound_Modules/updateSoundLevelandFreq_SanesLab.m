@@ -60,10 +60,19 @@ switch get(handles.level,'enable')
        
         %Get sound level from GUI
         sound_level = getVal(handles.level);
-        
+
         %Send the dBSPL value to the RPVds circuit
-        v = TDTpartag(AX,RUNTIME.TRIALS,[handles.module,'.dBSPL'],sound_level);
+        if isfield(handles,'level2')
+            v = TDTpartag(AX,RUNTIME.TRIALS,[handles.module,'.dBSPL1'],sound_level);
+            
+            sound_level2 = getVal(handles.level2);
+            v = TDTpartag(AX,RUNTIME.TRIALS,[handles.module,'.dBSPL2'],sound_level2);
+            %Set the dropdown menu color to blue
+            set(handles.level2,'ForegroundColor',[0 0 1]);
+        else
+            v = TDTpartag(AX,RUNTIME.TRIALS,[handles.module,'.dBSPL'],sound_level);
+            %Set the dropdown menu color to blue
+            set(handles.level,'ForegroundColor',[0 0 1]);
+        end
         
-        %Set the dropdown menu color to blue
-        set(handles.level,'ForegroundColor',[0 0 1]);
 end

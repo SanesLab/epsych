@@ -114,7 +114,7 @@ end
 %--------------------------------------------------------
 
 %Load in speaker calibration file
-[fn,pn,fidx] = uigetfile('C:\gits\epsych\UserFiles\SanesLab\SpeakerCalibrations\*.cal','Select speaker calibration file');
+[fn,pn,fidx] = uigetfile('C:\Users\sanesadmin\Documents\GitHub\epsych\UserFiles\SanesLab\SpeakerCalibrations\*.cal','Select speaker calibration file');
 calfile = fullfile(pn,fn);
 
 if ~fidx

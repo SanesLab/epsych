@@ -14,10 +14,13 @@ function handles = setupResponseandTrialHistory_SanesLab(handles)
 
 global RUNTIME ROVED_PARAMS
 
+%%%
+AFCindex    =   strcmp(ROVED_PARAMS,'AMrate1') | strcmp(ROVED_PARAMS,'AMrate2');
+AFCflag     =   sum(AFCindex);
+%%%
 
 %Set up Response History table
 cols = cell(1,numel(ROVED_PARAMS)+1);
-
 
 if RUNTIME.UseOpenEx
     strstart = length(handles.module)+2;
@@ -35,5 +38,7 @@ set(handles.DataTable,'Data',datacell,'RowName','0','ColumnName',cols);
 %Set up Trial History Table
 cols(end) = {'# Trials'};
 cols(end+1) = {'Hit rate(%)'};
-cols(end+1) = {'dprime'};
+if( ~AFCflag )
+    cols(end+1) = {'dprime'};
+end
 set(handles.TrialHistory,'Data',datacell,'ColumnName',cols);

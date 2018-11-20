@@ -43,6 +43,10 @@ active_ind = (strfind(table_data(:,c),'false'));
 active_ind = cellfun('isempty',active_ind);
 active_data = table_data(active_ind,:);
 
+%%%
+AFCindex    =   strcmp(table_data(:,2),'LEFT');
+AFCflag     =   sum(AFCindex);
+%%%
 
 %Define the starting state of the check box
 starting_state = table_data{r,c};
@@ -52,20 +56,33 @@ switch starting_state
     %If the box started out as checked...
     case 'true'
         
-        %Prevent the only NOGO from being de-selected
-        [NOGO_row_active,NOGO_row] = prevent_select(active_data,table_data,...
-            trial_type_col,'NOGO');
-        
-        %Prevent the only GO from being de-selected
-        [~,GO_row] = prevent_select(active_data,table_data,...
-            trial_type_col,'GO');
-        
-        
-        %Prevent the only expected and the only unexpected GO value from
-        %being deselected
-        [expected_row,unexpected_row] = ...
-            prevent_expected(col_names,active_data,table_data,NOGO_row_active);
-        
+        if( AFCflag )
+            %Prevent the only NOGO from being de-selected
+            [NOGO_row_active,NOGO_row] = prevent_select(active_data,table_data,...
+                trial_type_col,'LEFT');
+            
+            %Prevent the only GO from being de-selected
+            [~,GO_row] = prevent_select(active_data,table_data,...
+                trial_type_col,'RIGHT');
+            
+            %Prevent the only expected and the only unexpected GO value from
+            %being deselected
+            [expected_row,unexpected_row] = ...
+                prevent_expected(col_names,active_data,table_data,NOGO_row_active);            
+        else
+            %Prevent the only NOGO from being de-selected
+            [NOGO_row_active,NOGO_row] = prevent_select(active_data,table_data,...
+                trial_type_col,'NOGO');
+            
+            %Prevent the only GO from being de-selected
+            [~,GO_row] = prevent_select(active_data,table_data,...
+                trial_type_col,'GO');
+            
+            %Prevent the only expected and the only unexpected GO value from
+            %being deselected
+            [expected_row,unexpected_row] = ...
+                prevent_expected(col_names,active_data,table_data,NOGO_row_active);
+        end
         
     %If the box started out as unchecked, it's always okay to check it
     otherwise
@@ -82,12 +99,20 @@ switch r
     case [NOGO_row, GO_row, expected_row, unexpected_row]
         
         beep
-        warnstring = ['The following trial types cannot be deselected:'...
-            '(a) The only GO trial  (b) The only NOGO trial '...
-            '(c) The only expected GO trial'...
-            '(d) The only unexpected GO trial '];
-        warnhandle = warndlg(warnstring,'Trial selection warning'); %#ok<*NASGU>
-        
+        if( AFCflag )
+            warnstring = ['The following trial types cannot be deselected:'...
+                '(a) The only RIGHT trial  (b) The only LEFT trial '...
+                '(c) The only expected RIGHT trial'...
+                '(d) The only unexpected RIGHT trial '];
+            warnhandle = warndlg(warnstring,'Trial selection warning'); %#ok<*NASGU>
+        else
+            
+            warnstring = ['The following trial types cannot be deselected:'...
+                '(a) The only GO trial  (b) The only NOGO trial '...
+                '(c) The only expected GO trial'...
+                '(d) The only unexpected GO trial '];
+            warnhandle = warndlg(warnstring,'Trial selection warning'); %#ok<*NASGU>
+        end
         
     %If it's okay to select or de-select the checkbox, then proceed
     otherwise

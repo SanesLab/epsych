@@ -39,7 +39,7 @@ if isempty(currentdata)
     return
 end
 
-%Select out just the GO trials
+%Pull out just the GO trials
 GOtrials = currentdata(GOind,:);
 
 %Determine the variable to plot on the x axis
@@ -157,7 +157,7 @@ switch x_strings{x_ind}
         xtext = 'AM depth (%)';
         plotting_data(:,1) = plotting_data(:,1)*100; %percent
         vals = vals*100; %percent
-    case 'AMrate'
+    case {'AMrate','AMrate1','AMrate2'}
         xtext = 'AM rate (Hz)';
     otherwise
         xtext = '';

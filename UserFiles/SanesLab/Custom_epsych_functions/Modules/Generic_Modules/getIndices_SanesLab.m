@@ -52,8 +52,10 @@ else
     all_cols = TRIALS.writeparams;
 end
 
-
-
+%%%
+AFCindex    =   strcmp(all_cols,'AMrate1');
+AFCflag     =   sum(AFCindex);
+%%%
 
 %Then, restrict the cell array of all possible trials to include only those
 %parameters (columns) that are roved, and convert to a matrix
@@ -68,10 +70,15 @@ if ~isempty(GUI_HANDLES)
         %If the column contains strings
         if iscellstr(filterdata(:,i))
             
-            %Find the rows that contain GOs or NOGOs
-            Goind = ismember(filterdata(:,i),'GO');
-            Nogoind = ismember(filterdata(:,i),'NOGO');
-  
+            if( AFCflag )
+                %Find the rows that contain GOs or NOGOs
+                Goind = ismember(filterdata(:,i),'RIGHT');
+                Nogoind = ismember(filterdata(:,i),'LEFT');
+            else
+                %Find the rows that contain GOs or NOGOs
+                Goind = ismember(filterdata(:,i),'GO');
+                Nogoind = ismember(filterdata(:,i),'NOGO');
+            end
             
             %Convert to numerics.
             filterdata(Goind,i) = {0};

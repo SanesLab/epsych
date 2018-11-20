@@ -36,6 +36,9 @@ for i = 1:RUNTIME.NSubjects
         RCtag = AX(RUNTIME.RespCodeIdx(i)).GetTagVal(RUNTIME.RespCodeStr{i});
         TStag = AX(RUNTIME.TrigStateIdx(i)).GetTagVal(RUNTIME.TrigStateStr{i});
     end
+%     if( RCtag > 0 )
+%         disp(RCtag)
+%     end
     
     if ~RCtag || TStag, continue; end
   
@@ -74,7 +77,7 @@ for i = 1:RUNTIME.NSubjects
             data.Nogo_lim = getval(GUI_HANDLES.Nogo_lim);
             data.Nogo_min = getval(GUI_HANDLES.Nogo_min);
             
-        case {'appetitive_detection_gui','appetitive_detection_gui_v2'}
+        case {'appetitive_detection_gui','appetitive_detection_gui_v2','afc_gui'}
             data.Go_prob = getval(GUI_HANDLES.go_prob);
             data.NogoLim = getval(GUI_HANDLES.Nogo_lim);
             data.Expected_prob = getval(GUI_HANDLES.expected_prob);
@@ -124,7 +127,6 @@ for i = 1:RUNTIME.NSubjects
                     CONSEC_NOGOS = 0;
             end
             
-            
             %Determine if the last response was a FA
             response_list = bitget([data(:).ResponseCode]',4);
             
@@ -134,6 +136,7 @@ for i = 1:RUNTIME.NSubjects
                 case 0
                     CURRENT_FA_STATUS = 0;
             end
+            
             
             %Determine if last presentation was an unexpected GO
             if ~isempty(find(ismember(lower(tags),lower('Expected')),1))
@@ -148,6 +151,36 @@ for i = 1:RUNTIME.NSubjects
                 end
             end
             
+        case {'afc_gui'}
+            %Update number of consecutive nogos
+            trial_list = [data(:).TrialType]';
+            switch trial_list(end)
+                case 1
+                    CONSEC_NOGOS = CONSEC_NOGOS +1;
+                case 0
+                    CONSEC_NOGOS = 0;
+            end
+            
+            %Determine if the last response was a MISS
+            RC              =   data(:).ResponseCode;
+            if( RC == 170 || RC == 198 )
+                CURRENT_FA_STATUS = 1;
+            else
+                CURRENT_FA_STATUS = 0;
+            end
+            
+            %Determine if last presentation was an unexpected GO
+            if ~isempty(find(ismember(lower(tags),lower('Expected')),1))
+                
+                expected_list = [data(:).Expected]';
+                
+                switch expected_list(end)
+                    case 1
+                        CURRENT_EXPEC_STATUS = 0;
+                    case 0
+                        CURRENT_EXPEC_STATUS = 1;
+                end
+            end            
             
     end
     

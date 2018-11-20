@@ -33,9 +33,18 @@ else
     set(handles.group_plot,'String',{'None'})
 end
 
-%Establish predetermined yaxis options
-yaxis_opts = {'Hit Rate', 'd'''};
-set(handles.Yaxis,'String',yaxis_opts);
+%%%
+AFCindex    =   strcmp(ROVED_PARAMS,'AMrate1') | strcmp(ROVED_PARAMS,'AMrate2');
+AFCFlag     =   sum(AFCindex);
+%%%
+if( AFCFlag )
+    %Establish predetermined yaxis options
+    yaxis_opts = {'Hit Rate'};
+    set(handles.Yaxis,'String',yaxis_opts);
+else
+    yaxis_opts = {'Hit Rate', 'd'''};
+    set(handles.Yaxis,'String',yaxis_opts);
+end
 
 
 %Link x axes for realtime plotting

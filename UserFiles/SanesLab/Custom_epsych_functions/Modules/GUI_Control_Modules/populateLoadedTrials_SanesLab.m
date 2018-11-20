@@ -12,6 +12,7 @@ function handles = populateLoadedTrials_SanesLab(handles)
 %   handles: handles structure for GUI
 %
 %Written by ML Caras 7.24.2016
+%JDY & NP 10.9.2018
 
 global RUNTIME ROVED_PARAMS
 
@@ -64,11 +65,20 @@ end
 
 GOind = find([D{:,colind}] == 0);
 NOGOind = find([D{:,colind}] == 1);
-
-D(GOind,colind) = {'GO'}; %#ok<*FNDSB>
-D(NOGOind,colind) = {'NOGO'};
-D_remind(1,colind) = {'REMIND'};
-D(:,end) = {'true'};
+p   =   RUNTIME.TRIALS.writeparams;
+sel =   strcmp(p,'AMrate1');
+afcindx =   sum(sel);
+if( afcindx == 1 )
+    D(GOind,colind) = {'RIGHT'}; %#ok<*FNDSB>
+    D(NOGOind,colind) = {'LEFT'};
+    D_remind(1,colind) = {'REMIND'};
+    D(:,end) = {'true'};
+else
+    D(GOind,colind) = {'GO'}; %#ok<*FNDSB>
+    D(NOGOind,colind) = {'NOGO'};
+    D_remind(1,colind) = {'REMIND'};
+    D(:,end) = {'true'};
+end
 
 %Set formatting parameters
 formats = cell(1,size(D,2));

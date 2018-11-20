@@ -85,6 +85,16 @@ if trial_TTL == 0 || trial_type == 1
         updatetag_SanesLab(handles.ITI,handles.module,handles.dev,'ITI_dur')
     end
     
+    %Update ISI
+    if isfield(handles,'ISI')
+        updatetag_SanesLab(handles.ISI,handles.module,handles.dev,'ISI')
+    end
+
+    %Update LED Delay
+    if isfield(handles,'LED_Delay')
+        updatetag_SanesLab(handles.LED_Delay,handles.module,handles.dev,'LED_Delay')
+    end
+    
     %Update Optogenetic Trigger
     if isfield(handles,'optotrigger')
         updatetag_SanesLab(handles.optotrigger,handles.module,handles.dev,'Optostim')
@@ -111,11 +121,26 @@ if trial_TTL == 0 || trial_type == 1
     %-------------------------------------
     
     %Update sound frequency and level
-    handles = updateSoundLevelandFreq_SanesLab(handles);
-    
+    if isfield(handles,'AMrate1')
+        handles = updateSoundLevelandFreq_SanesLab_AFC(handles);
+    else
+        handles = updateSoundLevelandFreq_SanesLab(handles);
+    end
     %Update sound duration
     if isfield(handles,'sound_dur')
         updatetag_SanesLab(handles.sound_dur,handles.module,handles.dev,'Stim_Duration')
+    end
+     %Update Modulation duration
+    if isfield(handles,'ModDur')
+        updatetag_SanesLab(handles.ModDur,handles.module,handles.dev,'ModDur')
+    end   
+    %Update sound duration
+    if isfield(handles,'Stim1_Dur')
+        updatetag_SanesLab(handles.Stim1_Dur,handles.module,handles.dev,'Stim1_Dur')
+    end
+    %Update sound duration
+    if isfield(handles,'Stim2_Dur')
+        updatetag_SanesLab(handles.Stim2_Dur,handles.module,handles.dev,'Stim2_Dur')
     end
     
     %Update FM rate
@@ -136,7 +161,7 @@ if trial_TTL == 0 || trial_type == 1
     
     %Update AM Nogo rate: Important must be called BEFORE update AM Nogo depth
     if isfield(handles,'NogoAMRate')
-     updatetag_SanesLab(handles.NogoAMRate,handles.module,handles.dev,'AMrateNOGO')
+        updatetag_SanesLab(handles.NogoAMRate,handles.module,handles.dev,'AMrateNOGO')
     end
     
     %Update AM depth

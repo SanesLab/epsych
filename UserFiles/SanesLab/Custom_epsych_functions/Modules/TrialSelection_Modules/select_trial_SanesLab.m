@@ -62,7 +62,7 @@ end
 
 %Which trial type did we pick?
 switch initial_random_pick
-    
+
     %NOGO selected
     case 1
         NextTrialID = nogo_indices;
@@ -111,8 +111,6 @@ switch initial_random_pick
             end
             
         end
-        
-        
         
         %If multiple indices are valid (i.e. there are >1 GO
         %indices), and the user can determine the trial order from the
@@ -221,15 +219,25 @@ switch initial_random_pick
             
         %If there's only 1 GO value, and autoshock is enabled, turn the shock on    
         elseif numel(NextTrialID) == 1
+            %%%---FLAG FOR ALTERNATING CONDITION ONLY FOR 2 VALUES (USED FOR AFC)---%%%
+            if( strcmp( GUI_HANDLES.trial_order.String{GUI_HANDLES.trial_order.Value},'Alternating') )
+                if( LastTrialID == 1 )
+                    NextTrialID = 2;
+                elseif( LastTrialID == 2 )
+                    NextTrialID = 1;
+                end
+            end
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
             SHOCK_ON = 1;
             
         end
         
         %Update last trial ID
         LastTrialID = NextTrialID;
+
         
 end
-
 
 %Override initial pick and force a reminder trial if the remind buttom
 %was pressed by the end user
@@ -245,18 +253,27 @@ if ~isempty(GUI_HANDLES)
     end
 end
 
+%%%%%%%%
+p   =   TRIALS.writeparams;
+sel =   strcmp(p,'AMrate1');
+afcindx =   sum(sel);
 
-
-%Determine the next trial type for display
-if NextTrialID == remind_row;
-    Next_trial_type = 'REMIND';
-elseif TRIALS.trials{NextTrialID,trial_type_ind} == 0
-    Next_trial_type = 'GO';
-elseif TRIALS.trials{NextTrialID,trial_type_ind} == 1;
-    Next_trial_type = 'NOGO';
-end
-
-
-
-
+if( afcindx == 1 )
+    %Determine the next trial type for display
+    if NextTrialID == remind_row;
+        Next_trial_type = 'REMIND';
+    elseif TRIALS.trials{NextTrialID,trial_type_ind} == 0
+        Next_trial_type = 'RIGHT';
+    elseif TRIALS.trials{NextTrialID,trial_type_ind} == 1;
+        Next_trial_type = 'LEFT';
+    end
+else
+    %Determine the next trial type for display
+    if NextTrialID == remind_row;
+        Next_trial_type = 'REMIND';
+    elseif TRIALS.trials{NextTrialID,trial_type_ind} == 0
+        Next_trial_type = 'GO';
+    elseif TRIALS.trials{NextTrialID,trial_type_ind} == 1;
+        Next_trial_type = 'NOGO';
+    end
 end

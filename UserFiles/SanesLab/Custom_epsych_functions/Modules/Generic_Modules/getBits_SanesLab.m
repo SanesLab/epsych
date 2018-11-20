@@ -18,8 +18,13 @@ switch lower(boxfig)
         bits.miss = 2;
         bits.cr = 3;
         bits.fa = 4;
-   
-    
+        
+    case {'afc_gui'}
+        bits.hit = 1;
+        bits.miss = 2;
+        bits.abo = 3;
+        bits.hang = 4;
+        
     %Default
     otherwise
         warning('Box Figure not defined in getBits_SanesLab.m. Response code bits set to default.');

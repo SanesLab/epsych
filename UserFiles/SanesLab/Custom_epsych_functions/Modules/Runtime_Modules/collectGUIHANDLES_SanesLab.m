@@ -11,6 +11,7 @@ function collectGUIHANDLES_SanesLab(handles)
 %
 %Written by ML Caras 7.24.2016
 %kp 11.06.2016
+%JDY & NP 10.9.2018
 
 
 global GUI_HANDLES FUNCS
@@ -33,7 +34,7 @@ switch lower(FUNCS.BoxFig)
         rateval = get(handles.Pumprate,'Value');
         GUI_HANDLES.rate = str2num(ratestr{rateval})/1000; %ml
         
-    case {'appetitive_detection_gui','appetitive_detection_gui_v2'}
+    case {'appetitive_detection_gui','appetitive_detection_gui_v2','afc_gui'}
         
         %Collect GUI parameters for selecting next trial
         GUI_HANDLES.go_prob = get(handles.GoProb);

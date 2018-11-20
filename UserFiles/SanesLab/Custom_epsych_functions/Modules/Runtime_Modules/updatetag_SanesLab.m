@@ -40,8 +40,8 @@ switch get(gui_handle,'enable')
         
         switch paramtag
             case {'Silent_delay','RespWinDur','RespWinDelay',...
-                    'MinPokeDur','Lowpass','ITI_dur',...
-                    'ShockDur','to_duration','Stim_Duration'}
+                    'MinPokeDur','Lowpass','ITI_dur','ISI','LED_Delay',...
+                    'ShockDur','to_duration','Stim_Duration','Stim1_Dur','Stim2_Dur'}
                 val = val*1000; %msec or Hz
          
             case {'AMrate', 'AMrateGO', 'AMrateNOGO'}
