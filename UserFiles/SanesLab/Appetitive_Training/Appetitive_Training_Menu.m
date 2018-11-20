@@ -64,8 +64,9 @@ varargout{1} = handles.output;
 
 
  
-%Appetitive Pure Tone Training: Stage 1
- function puretone1_Callback(hObject, eventdata, handles)
+%Appetitive Training Callback
+ function Training_Callback(hObject, eventdata, handles)
+
 % Creates new timer for RPvds control of experiment
 T = timerfind;
 if ~isempty(T)
@@ -77,166 +78,58 @@ end
 %Set reward type global variable based on toggle button
 setRewardType(handles)
 
-RPfile = {'C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\RPVdsCircuits\Behavior_Appetitive\Training\Stage1\Appetitive_pure_tone_training_stage1.rcx'};
-title_text = {'Appetitive Pure Tone Training: Stage 1'};
-Appetitive_training(RPfile,title_text);
+%What type of training?
+ttype = get(hObject,'String');
 
-%Appetitive Pure Tone Training: Stage 2
- function puretone2_Callback(hObject, eventdata, handles)
-% Creates new timer for RPvds control of experiment
-T = timerfind;
-if ~isempty(T)
-    stop(T);
-    delete(T);
-end
-     
-%Set reward type global variable based on toggle button
-setRewardType(handles)
-
-RPfile = {'C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\RPVdsCircuits\Behavior_Appetitive\Training\Stage2\Appetitive_pure_tone_training_stage2.rcx'};
-title_text = {'Appetitive Pure Tone Training: Stage 2'};
-Appetitive_training(RPfile,title_text);
-
-
-
-
-%Appetitive Noise Training: Stage 1
- function noise1_Callback(hObject, eventdata, handles)
-% Creates new timer for RPvds control of experiment
-T = timerfind;
-if ~isempty(T)
-    stop(T);
-    delete(T);
-end
-
-%Set reward type global variable based on toggle button
-setRewardType(handles)
-     
-RPfile = {'C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\RPVdsCircuits\Behavior_Appetitive\Training\Stage1\Appetitive_noise_training_stage1.rcx'};
-title_text = {'Appetitive Noise Training: Stage 1'};
-Appetitive_training(RPfile,title_text);
-
-%Appetitive Noise Training: Stage 2
- function noise2_Callback(hObject, eventdata, handles)
-% Creates new timer for RPvds control of experiment
-T = timerfind;
-if ~isempty(T)
-    stop(T);
-    delete(T);
+%Get the RPVdsEx circuit
+switch ttype
+    
+    %STAGE 1 CIRCUITS
+    case 'Pure Tone Stage 1'
+        rpfile = 'Appetitive_pure_tone_training_stage1.rcx';
+        
+    case 'Noise Stage 1'
+        rpfile = 'Appetitive_noise_training_stage1.rcx';
+        
+    case 'AM Noise Stage 1'
+        rpfile = 'Appetitive_AMnoise_training_stage1.rcx';
+        
+    case 'AM Jitter Stage 1'
+        rpfile = 'Appetitive_AMjitter_training_stage1.rcx';
+        
+    case 'Same-Diff Stage 1'
+        rpfile = 'Appetitive_SameDifferent_training_stage1.rcx';
+        
+        
+    %STAGE 2 CIRCUITS    
+    case 'Pure Tone Stage 2'
+        rpfile = 'Appetitive_pure_tone_training_stage2.rcx';
+        
+    case 'Noise Stage 2'
+        rpfile = 'Appetitive_noise_training_stage2.rcx';
+        
+    case 'AM Noise Stage 2'
+        rpfile = 'Appetitive_AMnoise_training_stage2.rcx';
+        
+    case 'AM Jitter Stage 2'
+        rpfile = 'Appetitive_AMjitter_training_stage2.rcx';
+        
+    case 'Same-Diff Stage 2'
+        rpfile = 'Appetitive_SameDifferent_training_stage2.rcx';
 end
 
-%Set reward type global variable based on toggle button
-setRewardType(handles)
+%Get the full path of the circuit file
+rpfile = which(rpfile);
 
-RPfile = {'C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\RPVdsCircuits\Behavior_Appetitive\Training\Stage2\Appetitive_noise_training_stage2.rcx'};
-title_text = {'Appetitive Noise Training: Stage 2'};
-Appetitive_training(RPfile,title_text);
-
-
-
-
-%Appetitive AM Noise Training: Stage 1
-function AMnoise1_Callback(hObject, eventdata, handles)
-% Creates new timer for RPvds control of experiment
-T = timerfind;
-if ~isempty(T)
-    stop(T);
-    delete(T);
+if isempty(rpfile)
+    error('The RPvds file: ''%s'' was not found along the Matlab path',rpfile);
+else
+    Appetitive_training({rpfile},{ttype});
 end
 
-%Set reward type global variable based on toggle button
-setRewardType(handles)
-     
-RPfile = {'C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\RPVdsCircuits\Behavior_Appetitive\Training\Stage1\Appetitive_AMnoise_training_stage1.rcx'};
-title_text = {'Appetitive AM Noise Training: Stage 1'};
-Appetitive_training(RPfile,title_text);
-
-
-%Appetitive AM Noise Training: Stage 2
-function AMnoise2_Callback(hObject, eventdata, handles)
-% Creates new timer for RPvds control of experiment
-T = timerfind;
-if ~isempty(T)
-    stop(T);
-    delete(T);
-end
-
-%Set reward type global variable based on toggle button
-setRewardType(handles)
-
-RPfile = {'C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\RPVdsCircuits\Behavior_Appetitive\Training\Stage2\Appetitive_AMnoise_training_stage2.rcx'};
-title_text = {'Appetitive Noise Training: Stage 2'};
-Appetitive_training(RPfile,title_text);
 
 
 
-%Appetitive AM Noise with Jitter Training: Stage 1
-function AMjitter1_Callback(~, eventdata, handles)
-% Creates new timer for RPvds control of experiment
-T = timerfind;
-if ~isempty(T)
-    stop(T);
-    delete(T);
-end
-
-%Set reward type global variable based on toggle button
-setRewardType(handles)
-     
-RPfile = {'C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\RPVdsCircuits\Behavior_Appetitive\Training\Stage1\Appetitive_AMjitter_training_stage1.rcx'};
-title_text = {'Appetitive AM Jitter Training: Stage 1'};
-Appetitive_training(RPfile,title_text);
-
-
-%Appetitive AM Noise with Jitter Training: Stage 2
-function AMjitter2_Callback(hObject, eventdata, handles)
-% Creates new timer for RPvds control of experiment
-T = timerfind;
-if ~isempty(T)
-    stop(T);
-    delete(T);
-end
-
-%Set reward type global variable based on toggle button
-setRewardType(handles)
-
-RPfile = {'C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\RPVdsCircuits\Behavior_Appetitive\Training\Stage2\Appetitive_AMjitter_training_stage2.rcx'};
-title_text = {'Appetitive Jitter Training: Stage 2'};
-Appetitive_training(RPfile,title_text);
-
-
-
-
-%Appetitive Same-Different Pure Tone Training: Stage 1
- function SameDiff1_Callback(hObject, eventdata, handles)
-% Creates new timer for RPvds control of experiment
-T = timerfind;
-if ~isempty(T)
-    stop(T);
-    delete(T);
-end
-
-%Set reward type global variable based on toggle button
-setRewardType(handles)
-     
-RPfile = {'C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\RPVdsCircuits\Behavior_Appetitive\Training\Stage1\Appetitive_SameDifferent_training_stage1.rcx'};
-title_text = {'Appetitive Same-Different Tone Training: Stage 1'};
-Appetitive_training(RPfile,title_text);
-
-%Appetitive Same-Different Pure Tone Training: Stage 2
- function SameDiff2_Callback(hObject, eventdata, handles)
-% Creates new timer for RPvds control of experiment
-T = timerfind;
-if ~isempty(T)
-    stop(T);
-    delete(T);
-end
-     
-%Set reward type global variable based on toggle button
-setRewardType(handles)
-
-RPfile = {'C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\RPVdsCircuits\Behavior_Appetitive\Training\Stage2\Appetitive_SameDifferent_training_stage2.rcx'};
-title_text = {'Appetitive Same-Different Tone Training: Stage 2'};
-Appetitive_training(RPfile,title_text);
 
 
 %Set Reward Type Function

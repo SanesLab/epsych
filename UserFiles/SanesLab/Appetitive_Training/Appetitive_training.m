@@ -114,7 +114,8 @@ end
 %--------------------------------------------------------
 
 %Load in speaker calibration file
-[fn,pn,fidx] = uigetfile('C:\Users\sanesadmin\Documents\GitHub\epsych\UserFiles\SanesLab\SpeakerCalibrations\*.cal','Select speaker calibration file');
+cal = what('SanesLab\SpeakerCalibrations');
+[fn,pn,fidx] = uigetfile([cal.path,'\*.cal'],'Select speaker calibration file');
 calfile = fullfile(pn,fn);
 
 if ~fidx
@@ -126,10 +127,12 @@ else
 end
 
 %Are we running a noise training paradigm?
-[st,i] = dbstack;
-stcell = struct2cell(st);
-nameind = ~cellfun('isempty',strfind(fieldnames(st),'name'));
-noise_called = cell2mat(strfind(stcell(nameind,:),'noise'));
+% [st,i] = dbstack;
+% stcell = struct2cell(st);
+% nameind = ~cellfun('isempty',{strfind(fieldnames(st),'name'));
+% noise_called = cell2mat(strfind(stcell(nameind,:),'noise'));
+
+noise_called = strfind(varargin{1}{1},'noise');
 
 %Noise training
 if ~isempty(noise_called)
@@ -175,11 +178,13 @@ handles.tagnames = TagName;
 %ADJUST GUI PARAMETERS
 %--------------------------------------------------------
 %Are we running an AM training paradigm?
-[st,i] = dbstack;
-stcell = struct2cell(st);
-nameind = ~cellfun('isempty',strfind(fieldnames(st),'name'));
-AM_called = cell2mat(strfind(stcell(nameind,:),'AM'));
+% [st,i] = dbstack;
+% stcell = struct2cell(st);
+% nameind = ~cellfun('isempty',strfind(fieldnames(st),'name'));
+% AM_called = cell2mat(strfind(stcell(nameind,:),'AM'));
  
+AM_called = strfind(varargin{1}{1},'AM');
+
 %If we're not running AM
 if isempty(AM_called)
     
