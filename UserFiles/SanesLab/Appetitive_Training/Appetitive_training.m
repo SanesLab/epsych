@@ -78,21 +78,32 @@ end
 %--------------------------------------------------------
 switch REWARDTYPE
     case 'water'
+        %Set the reward type in the RPVds circuit
         handles.RP.SetTagVal('RewardType',0);
         
-        handles.pump = TrialFcn_PumpControl;
-        set(handles.numberpellets,'Enable','off');
+        %Disable the sound duration parameter because the sound will
+        %continue to play as long as the animal is breakig the spout IR
+        %beam (and the experimenter isn't overriding the circuit)
         set(handles.Duration,'enable','off');
+        
+        %Initialize the pump
+        handles.pump = TrialFcn_PumpControl;
+        
+        %Disable and food-related parameters in the GUI
+        set(handles.numberpellets,'Enable','off');
         set(handles.pelletCount,'ForegroundColor',[0.5 0.5 0.5]);
    
     case 'food'
+        %Set the reward type in the RPVds circuit
         handles.RP.SetTagVal('RewardType',1);
         
-        %We set the sound duration if using found reward because the IR
-        %beam for the food dispensier will not be continously broken when
+        %We set the sound duration if using food reward because the IR
+        %beam for the food dispenser will not be continously broken when
         %the animal receives a food reward.
         dur  = getval(handles.Duration);
         handles.RP.SetTagVal('Stim_Dur',dur); %sound duration
+        
+        %Set the number of pellets to be dispensed in the RPVds circuit
         num_pellets  = getval(handles.numberpellets);
         handles.RP.SetTagVal('num_pellets',num_pellets); %sets number of pellets to be dispensed
         
@@ -103,7 +114,6 @@ switch REWARDTYPE
         set(handles.waterAx,'visible','off');
         set(handles.text8,'visible','off');
         
-        
 end
 %--------------------------------------------------------
 
@@ -113,8 +123,8 @@ end
 %CALIBRATION CODE
 %--------------------------------------------------------
 
-%Load in speaker calibration file
-cal = what('SanesLab\SpeakerCalibrations');
+%Load in speaker calibration file 
+cal = what('SanesLab\SpeakerCalibrations');%(look specifically in this folder)
 [fn,pn,fidx] = uigetfile([cal.path,'\*.cal'],'Select speaker calibration file');
 calfile = fullfile(pn,fn);
 
@@ -126,28 +136,28 @@ else
     
 end
 
-%Are we running a noise training paradigm?
-% [st,i] = dbstack;
-% stcell = struct2cell(st);
-% nameind = ~cellfun('isempty',{strfind(fieldnames(st),'name'));
-% noise_called = cell2mat(strfind(stcell(nameind,:),'noise'));
-
+%What kind of paradigm are we running?
 noise_called = strfind(varargin{1}{1},'noise');
+AM_called = strfind(varargin{1}{1},'AM');
+SameDiff_called = strfind(varargin{1}{1},'SameDifferent');
+stage2_called = strfind(varargin{1}{1},'stage2');
 
-%Noise training
-if ~isempty(noise_called)
+%If we're doing noise or AM training
+if ~isempty(noise_called) || ~isempty(AM_called)
+    
+    %Disable the frequency dropdown
     set(handles.freq,'enable','off')
     handles.freq_flag = 0;
     
-    %We want noise calibration file
+    %Throw an error if a noise calibration file was not selected
     if ~isempty(calfiletype_tone)
         error('Error: Incorrect calibration file loaded')
     end
     
-%Tone training
-elseif isempty(noise_called)
+%If we're using tones for training training
+elseif isempty(noise_called) && isempty(AM_called)
     
-    %We want tone calibration file
+    %Throw an error if a tone calibration file was not selected
     if isempty(calfiletype_tone)
         error('Error: Incorrect calibration file loaded')
     end
@@ -177,14 +187,6 @@ handles.tagnames = TagName;
 %--------------------------------------------------------
 %ADJUST GUI PARAMETERS
 %--------------------------------------------------------
-%Are we running an AM training paradigm?
-% [st,i] = dbstack;
-% stcell = struct2cell(st);
-% nameind = ~cellfun('isempty',strfind(fieldnames(st),'name'));
-% AM_called = cell2mat(strfind(stcell(nameind,:),'AM'));
- 
-AM_called = strfind(varargin{1}{1},'AM');
-
 %If we're not running AM
 if isempty(AM_called)
     
@@ -192,11 +194,36 @@ if isempty(AM_called)
    set(handles.AMrate,'enable','off')
    set(handles.AMdepth,'enable','off')
    handles.AM_flag = 0;
-   
 else
     handles.AM_flag = 1;
-    
 end
+
+%If we're doing stage 2 training, disable the sound duration drop-down. The
+%experimenter has complete control over the sound delivery.
+if ~isempty(stage2_called)
+    set(handles.Duration,'enable','off')
+    handles.stage2_flag = 1;
+else
+    handles.stage2_flag = 0;
+end
+
+
+
+%If we're not running the same diff paradigm
+if isempty(SameDiff_called)
+   
+    %Disable the Pip Duration and ISI dropdowns
+    set(handles.PipDuration,'enable','off');
+    set(handles.ISI,'enable','off');
+    
+    handles.SameDiff_flag = 0;
+    
+elseif ~isempty(SameDiff_called)
+    
+    handles.SameDiff_flag = 1;
+end
+
+
 %Disable apply and stop button button
 set(handles.apply,'enable','off');
 set(handles.stop,'enable','off');
@@ -242,6 +269,8 @@ set(handles.freq,'ForegroundColor',[0 0 1]);
 set(handles.pumprate,'ForegroundColor',[0 0 1]);
 set(handles.Duration,'ForegroundColor',[0 0 1]);
 set(handles.numberpellets,'ForegroundColor',[0 0 1]);
+set(handles.ISI,'ForegroundColor',[0 0 1]);
+set(handles.PipDuration,'ForegroundColor',[0 0 1]);
 set(handles.apply,'enable','off');
 
 %Start Timer
@@ -338,7 +367,7 @@ function Timer_stop(~,~)
 
 %TIMER RUN FUNCTION
 function Timer_callback(~,event,handles)
-global PERSIST REWARDTYPE
+global PERSIST REWARDTYPE ROVE
 persistent starttime timestamps reward_hist sound_hist water_hist
 
 %If this is a new launch, clear persistent variables
@@ -391,7 +420,8 @@ sound_hist = [sound_hist;sound_TTL];
 
 %If sound_TTL goes high and frequency set to Rove, choose random frequency
 %value to send to rpvds curcuit.
-if (sound_hist(end) - sound_hist(end-1)) == 1 && handles.rove_flag == 1
+if (sound_hist(end) - sound_hist(end-1)) == 1 && ROVE == 1
+%if sound_TTL == 1 && ROVE == 1
     roved_freqs = [1000 2000 4000 8000 16000];
     freq = roved_freqs(1+round(rand(1)*(numel(roved_freqs)-1)));
     
@@ -508,7 +538,7 @@ end
 
 %UPDATE FUNCTION
 function handles = update(handles)
-        global ampTag REWARDTYPE
+        global ampTag REWARDTYPE ROVE
         
         switch REWARDTYPE
             case 'water'
@@ -535,15 +565,15 @@ function handles = update(handles)
             
             %If freq set to Rove, pick randomly from list of frequencies
             if strcmp('Rove',freq)
-                handles.rove_flag = 1;
+                ROVE = 1;
             else
-                handles.rove_flag = 0;
+                ROVE = 0;
                 handles.RP.SetTagVal('Freq',freq);
                 CalAmp = Calibrate(freq,handles.C);
             end
             
         else
-            handles.rove_flag = 0;
+            ROVE = 0;
             CalAmp = handles.C.data(1,4);
         end
         
@@ -559,6 +589,19 @@ function handles = update(handles)
             handles.RP.SetTagVal('AMdepth',AMdepth);
         end
         
+        %If running a same-different training session
+        if handles.SameDiff_flag == 1
+            
+            %Get pip duration from GUI and send back to RPVds circuit
+            pipdur = getval(handles.PipDuration);
+            handles.RP.SetTagVal('Pip_Dur',pipdur)
+            
+            %Get ISI duration from GUI and send back to RPVds circuit
+            ISI = getval(handles.ISI);
+            handles.RP.SetTagVal('ISI',ISI)
+            
+        end
+        
         
         
         
@@ -567,7 +610,8 @@ function handles = update(handles)
             [tags,~] = ReadRPvdsTags(handles.RPfile);
             ampInd = find(~cellfun('isempty',strfind(tags,'_Amp')));
             ampTag = [tags{ampInd}]; %#ok<*FNDSB>
-            if ~handles.rove_flag
+            
+            if ROVE == 0
                 handles.RP.SetTagVal(ampTag,CalAmp);
             end
             
@@ -575,8 +619,9 @@ function handles = update(handles)
             level = getval(handles.dBSPL);
             handles.RP.SetTagVal('dBSPL',level);
             
-            
         end
+        
+        
         
         %Set the dropdown menu colors to blue
         set(handles.freq,'ForegroundColor',[0 0 1]);
@@ -586,6 +631,8 @@ function handles = update(handles)
         set(handles.pumprate,'ForegroundColor',[0 0 1]);
         set(handles.Duration,'ForegroundColor',[0 0 1]);
         set(handles.numberpellets,'ForegroundColor',[0 0 1]);
+        set(handles.PipDuration,'ForegroundColor',[0 0 1]);
+        set(handles.ISI,'ForegroundColor',[0 0 1]);
         
 
 %AIR PUFF BUTTON
@@ -600,3 +647,5 @@ handles.RP.SetTagVal('AirPuff',0);
 v = handles.RP.GetTagVal('AirPuff')
 
 guidata(hObject,handles)
+
+

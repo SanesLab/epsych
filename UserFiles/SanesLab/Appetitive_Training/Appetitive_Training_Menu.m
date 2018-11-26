@@ -51,7 +51,7 @@ end
 
 
 % --- Executes just before Appetitive_Training_Menu is made visible.
-function Appetitive_Training_Menu_OpeningFcn(hObject, eventdata, handles, varargin)
+function Appetitive_Training_Menu_OpeningFcn(hObject, ~, handles, varargin)
 
 % Choose default command line output for Appetitive_Training_Menu
 handles.output = hObject;
@@ -59,13 +59,13 @@ handles.output = hObject;
 % Update handles structure
 guidata(hObject, handles);
 
-function varargout = Appetitive_Training_Menu_OutputFcn(hObject, eventdata, handles) 
+function varargout = Appetitive_Training_Menu_OutputFcn(~, ~, handles) 
 varargout{1} = handles.output;
 
 
  
 %Appetitive Training Callback
- function Training_Callback(hObject, eventdata, handles)
+ function Training_Callback(hObject, ~, handles)
 
 % Creates new timer for RPvds control of experiment
 T = timerfind;
@@ -94,9 +94,6 @@ switch ttype
     case 'AM Noise Stage 1'
         rpfile = 'Appetitive_AMnoise_training_stage1.rcx';
         
-    case 'AM Jitter Stage 1'
-        rpfile = 'Appetitive_AMjitter_training_stage1.rcx';
-        
     case 'Same-Diff Stage 1'
         rpfile = 'Appetitive_SameDifferent_training_stage1.rcx';
         
@@ -110,10 +107,7 @@ switch ttype
         
     case 'AM Noise Stage 2'
         rpfile = 'Appetitive_AMnoise_training_stage2.rcx';
-        
-    case 'AM Jitter Stage 2'
-        rpfile = 'Appetitive_AMjitter_training_stage2.rcx';
-        
+
     case 'Same-Diff Stage 2'
         rpfile = 'Appetitive_SameDifferent_training_stage2.rcx';
 end
