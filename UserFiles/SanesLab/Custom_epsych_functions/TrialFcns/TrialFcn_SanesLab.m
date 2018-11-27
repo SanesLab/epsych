@@ -115,7 +115,7 @@ if TRIALS.TrialIndex == 1
     CURRENT_EXPEC_STATUS = [];
     TRIAL_STATUS = 0;
     LastTrialID = [];
-    AUTOSHOCK = []; %default
+    %AUTOSHOCK = []; %default
 
     %If the pump has not yet been initialized, and we want water delivery
     if isempty(PUMPHANDLE) && strcmp(REWARDTYPE,'water')
