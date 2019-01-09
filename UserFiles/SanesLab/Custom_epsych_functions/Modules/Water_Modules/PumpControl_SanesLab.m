@@ -28,10 +28,11 @@ set(pump,'Terminator','CR','Parity','none','FlowControl','none','timeout',0.1);
 
 
 %Set up pump parameters. Obtain diameter, min and max rates from the last
-%page of the NE-1000 Syringe Pump User Manual.
-fprintf(pump,'DIA%0.1f\n',23.1); % set inner diameter of syringe (mm)
+%page of the NE-1000 Syringe Pump User Manual. Current values are for a 30
+%ml B-D syringe.
+fprintf(pump,'DIA%0.1f\n',21.5); % set inner diameter of syringe (mm)
 fprintf(pump,'RAT%s\n','MM');    % set rate units to mL/min
-fprintf(pump,'RAT%0.1f\n',20);   % set rate
+fprintf(pump,'RAT%0.1f\n',18);   % set rate
 fprintf(pump,'INF\n');           % set to infuse
 fprintf(pump,'VOL%0.2f\n',0);    % set unlimited volume to infuse (==0)
 fprintf(pump,'TRGLE\n');         % set trigger type
