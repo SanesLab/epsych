@@ -91,27 +91,34 @@ pHits			=	nan(NRates,1);
 N				=	nan(NRates,1);
 
 for i=1:NRates
+    
 	rate		=	Rates(i);
 	sel			=	DATA(:,2) == rate;
     data		=	DATA(sel,:);
     Crates(i,1) =   {num2str(rate)};
     
+    
+    
     for j=1:NDur
         
-        N(i,j)		=	sum(sel);
+        ssel        =   data(:,3) == ModDur(j);
+        dd          =   data(ssel,:);
+        N(i,j)		=	sum(ssel);
         
-        hel			=	data(:,4) == 1;
+        hel			=	dd(:,4) == 1;
         phits		=	sum(hel)/length(hel);
 %         Lat(i,j)	=	{data(hel,end)};
         pHits(i,j)	=	phits;
         
         Cdur(i,j)   =   {[ num2str(rate) ' Hz ' num2str(ModDur(j)) ' ms']};
+        
     end
+    
 end
 
-disp(['Rate' Cdur'])
-disp(['N = ' num2str(N')])
-disp(['Hit Rate = ' num2str(pHits')])
+disp([Cdur'])
+disp([num2str(N')])
+disp([num2str(pHits')])
 
 % T=table(pHits,'RowNames',Crates)
 % Num=table(N,'RowNames',Crates)

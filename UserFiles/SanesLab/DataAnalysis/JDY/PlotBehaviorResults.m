@@ -23,8 +23,8 @@ N				=	length(Data);
 for i=1:N
 	d(i).Reminder		=	Data(i).Reminder;
 	d(i).ResponseCode	=	Data(i).ResponseCode;
-	d(i).AMrate			=	Data(i).AMrate1;
-	d(i).AMdepth		=	Data(i).AMdepth1;
+	d(i).AMrate			=	Data(i).AMrate;
+	d(i).AMdepth		=	Data(i).AMdepth;
 	d(i).TrialType		=	Data(i).TrialType;
 	d(i).RespLatency	=	Data(i).RespLatency;
 end
@@ -62,20 +62,20 @@ for a=1:N
 				idx(b,1)	=	bitget(dat.ResponseCode,RespLegend.Miss);
 			end
 		end
-% % % 		if( b == 3 )
-% % % 			if( isfield(RespLegend, 'cr') )
-% % % 				idx(b,1)	=	bitget(dat.ResponseCode,RespLegend.cr);
-% % % 			else
-% % % 				idx(b,1)	=	bitget(dat.ResponseCode,RespLegend.CR);
-% % % 			end
-% % % 		end
-% % % 		if( b == 4 )
-% % % 			if( isfield(RespLegend, 'fa') )
-% % % 				idx(b,1)	=	bitget(dat.ResponseCode,RespLegend.fa);
-% % % 			else
-% % % 				idx(b,1)	=	bitget(dat.ResponseCode,RespLegend.FA);
-% % % 			end
-% % % 		end		
+		if( b == 3 )
+			if( isfield(RespLegend, 'cr') )
+				idx(b,1)	=	bitget(dat.ResponseCode,RespLegend.cr);
+			else
+				idx(b,1)	=	bitget(dat.ResponseCode,RespLegend.CR);
+			end
+		end
+		if( b == 4 )
+			if( isfield(RespLegend, 'fa') )
+				idx(b,1)	=	bitget(dat.ResponseCode,RespLegend.fa);
+			else
+				idx(b,1)	=	bitget(dat.ResponseCode,RespLegend.FA);
+			end
+		end		
 	end
 	Resp(a,1)			=	find(idx,1);
 	Rate(a,1)			=	dat.AMrate;
