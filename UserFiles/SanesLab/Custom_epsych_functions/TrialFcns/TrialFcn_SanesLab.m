@@ -38,6 +38,8 @@ handles = findModuleIndex_SanesLab('RZ6', []);
 %Rename rewardtype parameter for OpenEx Compatibility
 if RUNTIME.UseOpenEx
     param2 = [handles.module,'.','RewardType'];
+%     param = [handles.module,'.','RewardType'];
+%     param2  = 'RewardType';
     param = 'RewardType';
 else
     param  = 'RewardType';
@@ -153,7 +155,8 @@ switch lower(FUNCS.BoxFig)
         
         %Define name of expected parameter tag
         if RUNTIME.UseOpenEx
-            expect_paramtag = [h.module,'.Expected'];
+%             expect_paramtag = [h.module,'.Expected'];
+            expect_paramtag = 'Expected';
         else
             expect_paramtag = 'Expected';
         end
@@ -182,6 +185,7 @@ switch lower(FUNCS.BoxFig)
         %Define name of expected parameter tag
         if RUNTIME.UseOpenEx
             expect_paramtag = [h.module,'.Expected'];
+%             expect_paramtag = 'Expected';
         else
             expect_paramtag = 'Expected';
         end

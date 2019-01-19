@@ -67,7 +67,9 @@ GOind = find([D{:,colind}] == 0);
 NOGOind = find([D{:,colind}] == 1);
 p   =   RUNTIME.TRIALS.writeparams;
 sel =   strcmp(p,'AMrate1');
-afcindx =   sum(sel);
+ssel    =   strcmp(p,'RZ6(1).AMrate1');
+afcindx =   [sum(sel) sum(ssel)];
+afcindx =   sum(afcindx);
 if( afcindx == 1 )
     D(GOind,colind) = {'RIGHT'}; %#ok<*FNDSB>
     D(NOGOind,colind) = {'LEFT'};

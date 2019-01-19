@@ -29,6 +29,7 @@ for i = 1:numel(ROVED_PARAMS)
     
     switch variable
         case {'TrialType',[h.module,'.TrialType']}
+            
             USERDATA.TrialType = Next_trial_type;
             
         case {'Reminder',[h.module,'.Reminder']'}

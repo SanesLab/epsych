@@ -256,7 +256,9 @@ end
 %%%%%%%%
 p   =   TRIALS.writeparams;
 sel =   strcmp(p,'AMrate1');
-afcindx =   sum(sel);
+ssel    =   strcmp(p,'RZ6(1).AMrate1');
+afcindx =   [sum(sel) sum(ssel)];
+afcindx =   sum(afcindx);
 
 if( afcindx == 1 )
     %Determine the next trial type for display

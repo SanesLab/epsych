@@ -63,9 +63,11 @@ for a=1:N
     pellets(a,1)        =   dat.Pellet;
 % end
 end
+sel                     =   pellets > 50;
 DATA					=	[Trial Rate ModDur Resp Lat];
-rel						=	remind == 0;
-DATA					=	DATA(rel,:);
+DATA                    =   DATA(sel,:);
+% rel						=	remind == 0;
+% DATA					=	DATA(rel,:);
 
 function RespCode = getRespCode(ResponseCode)
 if( ResponseCode == 165 || ResponseCode == 201 ) %---Hit---%
