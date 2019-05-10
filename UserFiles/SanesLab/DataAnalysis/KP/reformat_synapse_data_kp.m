@@ -44,7 +44,7 @@ BLOCKNAME = PathFolders{end};
 
 
 RS4PATH = fullfile('\\10.1.0.42\data',TANKNAME,BLOCKNAME);
-
+% dir(RS4PATH)  should be able to access and copy files
 
 
 % Check that savedir exists
@@ -77,9 +77,10 @@ end
 fprintf('\n======================================================\n')
 fprintf('Processing ephys data, %s.......\n', BLOCKNAME)
 
+tic
 epData = TDTbin2mat(FULLPATH);
+toc
 
-% keyboard
 
 %% Find the associated behavior file if it exists
 
@@ -164,15 +165,17 @@ end %filter experiment type
 
 
 %%
-
 % Remove field containing eNeu data to save a little space
 if isfield(epData,'snips')
     epData = rmfield(epData,'snips');
 end
+if isfield(epData,'scalars')
+    epData = rmfield(epData,'scalars');
+end
 
 try
     fprintf('\nsaving...')
-    save(savefilename,'epData','-v7.3')
+    save(savefilename,'-struct','epData','-v7.3')
     fprintf('\n~~~~~~\nSuccessfully saved datafile to drive folder.\n\t %s\n~~~~~~\n',savefilename)
 catch
     warning('\n **Could not save file. Check that directory exists.\n')
@@ -180,10 +183,13 @@ catch
 end
 
 
+%%
+% Automatically remove sev files from local harddrive (they still exist on
+% the RS4)  --in order to prevent large synology backups
+delete(fullfile(FULLPATH,'*.sev'))
 
 
-
-
+%%
 fprintf('\n\n ##### Finished reformatting and saving data files.\n\n')
 
 

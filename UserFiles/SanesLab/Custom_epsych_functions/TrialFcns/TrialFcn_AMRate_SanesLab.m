@@ -5,7 +5,7 @@ global NOISE_CAL
 if TRIALS.tidx == 1
     
     %Load noise calibration file
-    [fn,pn,fidx] = uigetfile('C:\gits\epsych\UserFiles\SanesLab\SpeakerCalibrations\*.cal','Select noise calibration file');
+    [fn,pn,fidx] = uigetfile('C:\Users\SanesAdmin\Documents\GitHub\epsych\UserFiles\SanesLab\SpeakerCalibrations\*.cal','Select noise calibration file');
     noise_calfile = fullfile(pn,fn);
     
     disp(['Noise calibration file is: ' noise_calfile])

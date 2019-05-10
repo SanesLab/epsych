@@ -22,7 +22,7 @@ function varargout = AMRate_tuning_gui(varargin)
 
 % Edit the above text to modify the response to help basic_characterization
 
-% Last Modified by GUIDE v2.5 31-Mar-2016 15:25:57
+% Last Modified by GUIDE v2.5 11-Mar-2019 16:18:32
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -46,15 +46,28 @@ end
 
 %OPENING FUNCTION
 function freq_tuning_OpeningFcn(hObject, eventdata, handles, varargin)
-global G_DA G_COMPILED NOISE_CAL RUNTIME
+global G_DA G_COMPILED NOISE_CAL RUNTIME AX SYN SYN_STATUS
 
 %Store device info
 RUNTIME.TDT = TDT_GetDeviceInfo(G_DA);
 RUNTIME.UseOpenEx = 1;
 handles = findModuleIndex_SanesLab('RZ6',handles);
 
-% Initialize physiology
-% [handles,G_DA] = initializePhysiology_SanesLab(handles,G_DA);
+%Initialize physiology settings for multi channel recording (if OpenEx)
+[handles,AX] = initializePhysiology_SanesLab(handles,AX);
+if strcmp(get(handles.ReferencePhys,'enable'),'on') %kp 11/2017
+    
+    %If we're not running synapse, update via open developer controls
+    if ~isempty(SYN_STATUS)
+        AX = ReferencePhys_SanesLab(handles,AX);
+        
+    %If we're running Synapse, update via Synapse API    
+    elseif isempty(SYN_STATUS)
+        SYN = ReferencePhys_SanesLab(handles,SYN);
+    end
+    
+    
+end
 
 %%%%%%%%
 bandwidth = G_COMPILED.trials(1,strcmp(G_COMPILED.writeparams,'Behavior.BandRatio'));
@@ -106,74 +119,9 @@ else
     G_DA.SetTargetVal('Behavior.dBSPL',dBSPL);
     %%%%%%%%
 end
-% %%%%%%%%
-% dBSPL = G_COMPILED.trials(1,strcmp(G_COMPILED.writeparams,'Behavior.dBSPL'));
-% dBSPL = dBSPL{1};
-% G_DA.SetTargetVal('Behavior.~Cal_norm',NOISE_CAL.hdr.cfg.ref.norm);
-% 
-% %Calculate the voltage adjustment
-% CalAmp = NOISE_CAL.data(1,4);
-% %Send the values to the RPvds circuit
-% G_DA.SetTargetVal('Behavior.~Cal_Amp',CalAmp);
-% G_DA.SetTargetVal('Behavior.dBSPL',dBSPL);
+
 % %%%%%%%%
 handles.output = hObject;
-
-%--------------------------------------------
-%Send initial weight matrix to parameter_tag
-
-%Create initial, non-biased weights
-v = ones(1,16);
-WeightMatrix = diag(v);
-
-%Reshape matrix into single row for RPVds compatibility
-WeightMatrix =  reshape(WeightMatrix',[],1);
-WeightMatrix = WeightMatrix';
-
-
-
-%Prompt user to identify bad channels
-numchannels = 16; %Hard coded for a 16 channel array
-
-channelList = {'1','2','3','4','5','6','7','8',...
-    '9','10','11','12','13','14','15','16'};
-
-header = 'Select bad channels. Hold Ctrl to select multiple channels.';
-
-bad_channels = listdlg('ListString',channelList,'InitialValue',8,...
-    'Name','Channels','PromptString',header,...
-    'SelectionMode','multiple','ListSize',[300,300])
-
-
-if ~isempty(bad_channels)
-    %Calculate weight for non-identical pairs
-    weight = -1/(numchannels - numel(bad_channels) - 1);
-    
-    %Initialize weight matrix
-    WeightMatrix = repmat(weight,numchannels,numchannels);
-    
-    %The weights of all bad channels are 0.
-    WeightMatrix(:,bad_channels) = 0;
-    
-    %Do not perform averaging on bad channels: leave as is.
-    WeightMatrix(bad_channels,:) = 0;
-    
-    %For each channel
-    for i = 1:numchannels
-        %Its own weight is 1
-        WeightMatrix(i,i) = 1;
-    end
-    
-    %Reshape matrix into single row for RPVds compatibility
-    WeightMatrix =  reshape(WeightMatrix',[],1);
-    WeightMatrix = WeightMatrix';
-end
-
-
-G_DA.WriteTargetVEX('Phys.WeightMatrix',0,'F32',WeightMatrix);
-
-%--------------------------------------------
-
 
 
 %--------------------------------------------
@@ -206,97 +154,18 @@ varargout{1} = handles.output;
 %---------------------------------------------------------------
 %PHYSIOLOGY
 %---------------------------------------------------------------
-%REFERENCE PHYS
-function refphys_Callback(hObject, eventdata, handles)
-%The method we're using here to reference channels is the following:
-%First, bad channels are removed.
-%Second a single channel is selected and held aside.
-%Third, all of the remaining (good, non-selected) channels are averaged.
-%Fourth, this average is subtracted from the selected channel.
-%This process is repeated for each good channel.
-%
-%The way this method is implemented in the RPVds circuit is as follows:  
-%
-%From Brad Buran:
-%
-% This is implemented using matrix multiplication in the format D x C =
-% R. C is a single time-slice of data in the shape [16 x 1]. In other
-% words, it is the value from all 16 channels sampled at a single point
-% in time. D is a 16 x 16 matrix. R is the referenced output in the
-% shape [16 x 1]. Each row in the matrix defines the weights of the
-% individual channels. So, if you were averaging together channels 2-16
-% and subtracting the mean from the first channel, the first row would
-% contain the weights:
-% 
-% [1 -1/15 -1/15 ... -1/15]
-% 
-% If you were averaging together channels 2-8 and subtracting the mean
-% from the first channel:
-% 
-% [1 -1/7 -1/7 ... -1/7 0 0 0 ... 0]
-% 
-% If you were averaging together channels 3-8 (because channel 2 was
-% bad) and subtracting the mean from the first channel:
-% 
-% [1 0 -1/6 ... -1/6 0 0 0 ... 0]
-% 
-% To average channels 1-4 and subtract the mean from the first channel:
-% 
-% [3/4 -1/4 -1/4 -1/4 0 ... 0]
-% 
-% To repeat the same process (average channels 1-4 and subtract the
-% mean) for the second channel, the second row in the matrix would be:
-% 
-% [-1/4 3/4 -1/4 -1/4 0 ... 0]
 
+%REFERENCE PHYSIOLOGY BUTTON
+function ReferencePhys_Callback(~, ~, handles)
+global AX SYN_STATUS SYN
 
-global G_DA
+handles = TrialDelivery_Callback_SanesLab(handles,'off');
 
-%Hard coded for a 16 channel array
-numchannels = 16;
-
-%Prompt user to identify bad channels
-channelList = {'1','2','3','4','5','6','7','8',...
-    '9','10','11','12','13','14','15','16'};
-
-header = 'Select bad channels. Hold Ctrl to select multiple channels.';
-
-bad_channels = listdlg('ListString',channelList,'InitialValue',8,...
-    'Name','Channels','PromptString',header,...
-    'SelectionMode','multiple','ListSize',[300,300])
-
-
-if ~isempty(bad_channels)
-    %Calculate weight for non-identical pairs
-    weight = -1/(numchannels - numel(bad_channels) - 1);
-    
-    %Initialize weight matrix
-    WeightMatrix = repmat(weight,numchannels,numchannels);
-    
-    %The weights of all bad channels are 0.
-    WeightMatrix(:,bad_channels) = 0;
-    
-    %Do not perform averaging on bad channels: leave as is.
-    WeightMatrix(bad_channels,:) = 0;
-    
-    %For each channel
-    for i = 1:numchannels
-        
-        %Its own weight is 1
-        WeightMatrix(i,i) = 1;
-        
-    end
-    
-    %Reshape matrix into single row for RPVds compatibility
-    WeightMatrix =  reshape(WeightMatrix',[],1);
-    WeightMatrix = WeightMatrix';
-    
-    
-    %Send to RPVds
-    G_DA.WriteTargetVEX('Phys.WeightMatrix',0,'F32',WeightMatrix);
+if ~isempty(SYN_STATUS)
+    AX = ReferencePhys_SanesLab(handles,AX);
+elseif isempty(SYN_STATUS)
+    SYN = ReferencePhys_SanesLab(handles,SYN);
 end
-
-guidata(hObject,handles);
 
 
 

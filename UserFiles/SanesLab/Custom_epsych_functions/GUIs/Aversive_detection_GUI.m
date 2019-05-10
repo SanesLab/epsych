@@ -244,6 +244,9 @@ global RUNTIME PERSIST AX
 
 persistent lastupdate starttime waterupdate bits
 
+
+
+
 %--------------------------------------------------------
 %Abort if active X controls have been closed
 %--------------------------------------------------------
@@ -268,7 +271,7 @@ h = guidata(f);
 
 try
     %Update Realtime Plot
-    UpdateAxHistory(h,starttime,event)
+    UpdateAxHistory(h,starttime,event);
     
     %Capture sound level from microphone
     h = capturesound_SanesLab(h);
