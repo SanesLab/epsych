@@ -6,8 +6,8 @@ function [fft_data,varargout] = TDTfft(data, channel, varargin)
 %   fft_data    contains power spectrum array
 %   fft_freq    contains the frequency list (optional)
 %
-%   fft_data = TDTfft(DATA, CHANNEL,'parameter',value,...)
-%   [fft_data, fft_freq] = TDTfft(DATA, CHANNEL,'parameter',value,...)
+%   fft_data = TDTfft(DATA, CHANNEL, 'parameter', value,...)
+%   [fft_data, fft_freq] = TDTfft(DATA, CHANNEL, 'parameter', value,...)
 %
 %   'parameter', value pairs
 %      'PLOT'       boolean, set to false to disable figure
@@ -18,6 +18,7 @@ function [fft_data,varargout] = TDTfft(data, channel, varargin)
 %                   frequencies will be returned instead of full scale
 %                   (default = [0 FS/2])
 %      'RESOLUTION' scalar, the frequency resolution, (default = 1)
+%      'LEGEND'     Add a string to describe the data trace
 %
 %   Example
 %      data = TDTbin2mat('C:\TDT\OpenEx\Tanks\DEMOTANK2\Block-1');
@@ -33,8 +34,9 @@ NUMAVG   = 1;
 SPECPLOT = false;
 FREQ = [0, data.fs/2];
 RESOLUTION = 1;
+LEGEND = false;
 
-VALID_PARS = {'PLOT','NUMAVG','SPECPLOT','FREQ','RESOLUTION'};
+VALID_PARS = {'PLOT','NUMAVG','SPECPLOT','FREQ','RESOLUTION','LEGEND'};
 
 % parse varargin
 for ii = 1:2:length(varargin)
@@ -140,9 +142,14 @@ else
 end
 
 % set time scale
-if round(max(t)) == 0
+if floor(t(end)/10) == 0
+    % if less than 10 seconds, use ms
     t = t*1000;
     x_units = 'ms';
+elseif floor(t(end)/600) > 0
+    % if over 10 minutes, use minutes
+    t = t/60;
+    x_units = 'min';
 else
     x_units = 's';
 end
@@ -152,16 +159,23 @@ plot(t,y*factor)
 xlabel(['Time (' x_units ')'])
 if max(y*factor) < 0
     axis([0 t(end) min(y*factor)*1.05 max(y*factor)*.95]);
+elseif min(y*factor) > 0
+    axis([0 t(end) min(y*factor)*.95 max(y*factor)*1.05]);
 else
     axis([0 t(end) min(y*factor)*1.05 max(y*factor)*1.05]);
 end
 grid on;
 ylabel(y_units)
 title(sprintf('Raw Signal (%.2f %srms)', r*factor, y_units))
+if LEGEND
+   legendstr = LEGEND; 
+   legend(legendstr);
+end
+
 
 % plot single-sided amplitude spectrum
 subplot(numplots,1,2);
-plot(fft_freq, fft_data)
+semilogx(fft_freq, fft_data)
 title('Single-Sided Amplitude Spectrum of y(t)')
 xlabel('Frequency (Hz)')
 ylabel('|Y(f)|')
@@ -174,7 +188,7 @@ end
 % plot power spectrum
 subplot(numplots,1,3)
 fft_data = 20*log10(fft_data);
-plot(fft_freq, fft_data)
+semilogx(fft_freq, fft_data)
 title('Power Spectrum')
 xlabel('Frequency (Hz)')
 ylabel('dBV')

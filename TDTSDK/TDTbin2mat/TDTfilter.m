@@ -4,6 +4,9 @@ function data = TDTfilter(data, epoc, varargin)
 %   the output of TDTbin2mat or TDT2mat, EPOC is the name of the epoc to 
 %   filter on, and parameter value pairs define the filtering conditions.
 %
+%   If no parameters are specified, then the time range of the EPOC event
+%   is used as a time filter.
+%
 %   Also creates data.filter, a string that describes the filter applied.
 %
 %   'parameter', value pairs
@@ -113,6 +116,12 @@ if ~isempty(VALUES)
     
     time_ranges = [d.onset(valid==1)';d.offset(valid==1)'];
 
+    if isempty(time_ranges)
+        warning('No valid time ranges found')
+        data = NaN;
+        return
+    end
+    
     % create filter string
     filter_string = sprintf('%s: VALUE in [', epoc);
     if iscell(VALUES)
@@ -219,6 +228,18 @@ if TIMEREF
     end
 end
 
+if nargin == 2
+    % no filter specified, use EPOC time ranges
+    time_ranges = [d.onset,d.offset]';
+    
+    % AND time_range with existing time ranges
+    if isfield(data, 'time_ranges')
+        time_ranges = timerange2(time_ranges, data.time_ranges, 'AND');
+        data.time_ranges = time_ranges;
+    end
+    filter_string = sprintf('EPOC: %s;', epoc);
+end
+    
 % set filter string
 if isfield(data, 'filter')
     data.filter = strcat(data.filter, filter_string);
@@ -276,14 +297,12 @@ if ~isempty(data.snips)
         
         for j = 1:numel(ts)
             ts_ind = find(ts(j) > time_ranges(1,:) & ts(j) < time_ranges(2,:) == 1);
+            
             if ts_ind
                 if numel(ts_ind) > 1
                     min_diff = min(abs(time_ranges(1, ts_ind(1))-time_ranges(1, ts_ind(2))), abs(time_ranges(2, ts_ind(1))-time_ranges(2, ts_ind(2))));
                     warning_value = min_diff;
-                    %time_ranges(:, ts_ind(1))
-                    %time_ranges(:, ts_ind(2))
                     continue
-                    ts_ind = ts_ind(1);
                 end
                 keep_ind = keep_ind + 1;
                 keep(keep_ind) = j;
@@ -384,16 +403,17 @@ if size(tr1, 1) ~= 2 || size(tr2, 1) ~= 2
     error('invalid time range size');
 end
 
-logic = upper(logic);
-bOR = strcmp(logic, 'OR');
-bAND = strcmp(logic, 'AND');
-
 max_ranges_possible = size(tr1,2) + size(tr2,2);
 valid_ranges = zeros(2,max_ranges_possible);
 
 % start with first time range, check the end timestamps
 valid_ind = 0;
-if bAND
+if strcmpi(logic, 'AND')
+    % put them in order
+    [x, id] = sort(tr1,2);
+    tr1 = tr1(:, id(1,:));
+    [x, id] = sort(tr2,2);
+    tr2 = tr2(:, id(1,:));
     for ii = 1:size(tr1,2)
         start1 = tr1(1,ii);
         stop1 = tr1(2,ii);
@@ -401,12 +421,22 @@ if bAND
             start2 = tr2(1,jj);
             stop2 = tr2(2,jj);
             if start2 > stop1
-                % we're already passed the end
+                % we're already passed the end of tr1
                 % stop checking and move to next one
                 break
             end
-            if stop2 < start1
+            if stop2 <= start1
+                % tr2 ends before the beginning of tr1, skip
                 continue
+            end
+            if valid_ind > 0
+                if start1 > valid_ranges(1,valid_ind) && start1 < valid_ranges(2, valid_ind)
+                    valid_ranges(1, valid_ind) = start1;
+                    % if start1 is within last valid range, use it
+                    % check end time
+                    valid_ranges(2, valid_ind) = min(valid_ranges(2, valid_ind), stop1);
+                    continue
+                end
             end
             start_valid = max(start1, start2);
             stop_valid = min(stop1, stop2);
@@ -414,9 +444,7 @@ if bAND
             valid_ranges(:,valid_ind) = [start_valid;stop_valid];
         end
     end
-end
-
-if bOR
+elseif strcmpi(logic, 'OR')
     % put all time ranges in order of starting time stamp
     all_ranges = [tr1 tr2];
     [x, id] = sort(all_ranges,2);
@@ -429,10 +457,11 @@ if bOR
             % first range is starting valid range
             curr_start_valid = start1;
             curr_stop_valid = stop1;
+            valid_ind = valid_ind + 1;
             valid_ranges(:,1) = [curr_start_valid;curr_stop_valid];
             continue
         end
-        if start1 < curr_stop_valid && stop1 > curr_stop_valid
+        if start1 <= curr_stop_valid && stop1 > curr_stop_valid
             % if new time range is inside old one but end overlaps, use new end
             curr_stop_valid = stop1;
             valid_ranges(2,valid_ind) = curr_stop_valid;
@@ -446,6 +475,8 @@ if bOR
            valid_ranges(:,valid_ind) = [curr_start_valid;curr_stop_valid];
         end            
     end
+else
+    error('Logic input ''%s'' is not valid, use ''OR'' or ''AND''', logic)
 end
 
 valid_ranges = valid_ranges(:,1:valid_ind);

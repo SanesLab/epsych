@@ -47,10 +47,10 @@ TANK      = '';
 BLOCK     = '';
 T1        = 0;
 T2        = 0;
-FS        = 0;
 RANGES    = [];
 VERBOSE   = 0;
 JUSTNAMES = 0;
+FS        = 0;
 
 VALID_PARS = {'CHANNEL','EVENTNAME','DEVICE','TANK','BLOCK','T1','T2' ...
     'RANGES','VERBOSE','JUSTNAMES','FS'};
@@ -86,16 +86,20 @@ elseif xxx == 7
         SEV_DIR = [SEV_DIR filesep];
     end
     file_list = dir([SEV_DIR '*.sev']);
+elseif xxx == 0
+    error('Unable to find sev file or directory:\n\t%s', SEV_DIR)
 end
 
 nfiles = length(file_list);
 if nfiles < 1
-    warning(['no sev files found in ' SEV_DIR])
+    if VERBOSE
+        fprintf('info: no sev files in %s\n', SEV_DIR);
+    end
     return
 end
 
 if FS > 0
-    warning('Assuming %s SEV sampling rate is %.4f Hz', EVENTNAME, FS)
+    fprintf('Using %.4f Hz as SEV sampling rate for %s\n', FS, EVENTNAME)
 end
     
 % find out what data we think is here
@@ -167,7 +171,8 @@ for i = 1:length(file_list)
         reserved                 = fread(fid, 1, 'uint16');
         
         % data format of stream in lower four bits
-        streamHeader.dForm      = ALLOWED_FORMATS{bitand(fread(fid, 1, 'uint8'),7)+1};
+        dform = fread(fid, 1, 'uint8');
+        streamHeader.dForm      = ALLOWED_FORMATS{bitand(dform,7)+1};
         
         % used to compute actual sampling rate
         streamHeader.decimate   = fread(fid, 1, 'uint8');
@@ -219,7 +224,8 @@ for i = 1:length(file_list)
     func = str2func(streamHeader.dForm);
     tempvar = func(zeros(1,1));
     w = whos('tempvar');
-    file_list(i).npts = file_list(i).data_size / w.bytes;
+    file_list(i).itemSize = w.bytes;
+    file_list(i).npts = file_list(i).data_size / file_list(i).itemSize;
     file_list(i).fs = streamHeader.fs;
     file_list(i).dForm = streamHeader.dForm;
     file_list(i).eventName = streamHeader.eventName;
@@ -244,7 +250,7 @@ if ~isempty(RANGES)
 end
 numRanges = size(validTimeRange, 2);
 if numRanges > 0
-    data.time_ranges = RANGES;
+    data.time_ranges = validTimeRange;
 end
 
 for ev = 1:numel(eventNames)
@@ -284,28 +290,45 @@ for ev = 1:numel(eventNames)
     end
     
     % determine total samples if there is chunking
+    % and how many samples are in each file
     total_samples = 0;
+    
+    npts = zeros(1, numel(hour_values));
     for jjj = hour_values
         temp_num = intersect(find([file_list_temp.hour] == jjj), matching_ch);
-        total_samples = total_samples + max([file_list_temp(temp_num).npts]);
+        npts(jjj+1) = file_list_temp(temp_num).npts;
+        total_samples = total_samples + npts(jjj+1);
     end
     
     % if we are doing time filtering, determine which files we need to read
     % from and how many samples
-    minSample = zeros(1, numRanges);
-    maxSample = zeros(1, numRanges);
-    minSampleOffset = zeros(1, numRanges);
-    maxSampleOffset = zeros(1, numRanges);
-    minHourOffset = zeros(1, numRanges);
-    maxHourOffset = zeros(1, numRanges);
+    absoluteStartSample = zeros(1, numRanges);
+    absoluteEndSample = zeros(1, numRanges);
+    
+    startHourFile = zeros(1, numRanges);
+    endHourFile = zeros(1, numRanges);
+    
+    startHourSamplesToSkip = zeros(1, numRanges);
+    endHourSamplesEnd = zeros(1, numRanges);
+    
     for jj = 1:numRanges
-        minSample(jj) = max(ceil(validTimeRange(1,jj) * fs), 0) + 1;
-        maxSample(jj) = min(max(floor(validTimeRange(2,jj) * fs), 0) + 1, total_samples);
-        minHourOffset(jj) = floor((minSample(jj)-1) / max([file_list_temp(temp_num).npts]));
-        maxHourOffset(jj) = floor((maxSample(jj)-1) / max([file_list_temp(temp_num).npts]));
-        minSampleOffset(jj) = mod(minSample(jj)-1, total_samples) + 1;
-        maxSampleOffset(jj) = mod(maxSample(jj)-1, total_samples) + 1;
-    end
+        
+        absoluteStartSample(jj) = max(ceil(validTimeRange(1,jj) * fs), 0) + 1;
+        absoluteEndSample(jj) = min(max(floor(validTimeRange(2,jj) * fs), 0) + 1, total_samples);
+        curr_samples = 0;
+        for jjj = hour_values
+            if curr_samples <= absoluteStartSample(jj)
+                startHourSamplesToSkip(jj) = absoluteStartSample(jj) - curr_samples - 1;
+                startHourFile(jj) = jjj;
+            end
+            if curr_samples + npts(jjj+1) >= absoluteEndSample(jj)
+                endHourSamplesEnd(jj) = absoluteEndSample(jj) - curr_samples;
+                endHourFile(jj) = jjj;
+                break
+            end
+            curr_samples = curr_samples + npts(jjj+1);
+        end
+    end    
     
     % now allocate it
     if CHANNEL > 0
@@ -315,22 +338,24 @@ for ev = 1:numel(eventNames)
     end
     data.(file_list_temp(1).varName).data = cell(1, numRanges);
     for jj = 1:numRanges
-        data.(file_list_temp(1).varName).data{jj} = zeros(numel(channels), maxSample(jj) - minSample(jj) + 1, dForm);
+        if CHANNEL > 0
+            data.(file_list_temp(1).varName).data{jj} = zeros(1, absoluteEndSample(jj) - absoluteStartSample(jj) + 1, dForm);
+        else
+            data.(file_list_temp(1).varName).data{jj} = zeros(numel(channels), absoluteEndSample(jj) - absoluteStartSample(jj) + 1, dForm);
+        end
     end
     data.(file_list_temp(1).varName).channels = channels;
-    loop = channels;
     
     % loop through the time ranges
     for ii = 1:numRanges
         
         % loop through the channels
-        ind = 1;
-        for jj = loop
+        for chan = channels
             chanIndex = 1;
-            matching_ch = find([file_list_temp.chan] == jj);
+            matching_ch = find([file_list_temp.chan] == chan);
         
             % loop through the chunks
-            for kk = minHourOffset(ii):maxHourOffset(ii)
+            for kk = startHourFile(ii):endHourFile(ii)
             
                 file_num = intersect(find([file_list_temp.hour] == kk), matching_ch);
                 
@@ -342,30 +367,34 @@ for ev = 1:numel(eventNames)
                     return
                 end
             
-                % skip first 40 bytes
-                fread(fid, 10, 'single');
+                % skip first 40 bytes from header
+                fseek(fid, 40, 'bof');
                 
                 % read rest of file into data array as correct format
                 varname = file_list_temp(file_num).varName;
                 data.(varname).name = eventName;
                 data.(varname).fs = fs;
                 
-                if kk == minHourOffset(ii)
-                    firstSample = minSampleOffset(ii)-1;
+                if kk == startHourFile(ii)
+                    firstSample = startHourSamplesToSkip(ii)-1;
                 else
                     firstSample = 0;
                 end
-                if kk == maxHourOffset(ii)
-                    lastSample = maxSampleOffset(ii);
+                if kk == endHourFile(ii)
+                    lastSample = endHourSamplesEnd(ii);
                 else
                     lastSample = Inf;
                 end
                 
                 % skip ahead
-                fread(fid, firstSample, dForm);
-                readSize = lastSample - firstSample;
-                
-                data.(varname).data{ii}(ind, chanIndex:chanIndex + readSize - 1) = fread(fid, readSize, ['*' dForm])';
+                fseek(fid, firstSample*file_list_temp(file_num).itemSize, 'cof');
+                ddd = fread(fid, lastSample - firstSample, ['*' dForm])';
+                readSize = numel(ddd);
+                if CHANNEL > 0
+                    data.(varname).data{ii}(1, chanIndex:chanIndex + readSize - 1) = ddd;
+                else
+                    data.(varname).data{ii}(chan, chanIndex:chanIndex + readSize - 1) = ddd;
+                end
                 chanIndex = chanIndex + readSize;
                 
                 % close file
@@ -374,7 +403,6 @@ for ev = 1:numel(eventNames)
                 if VERBOSE
                     file_list(file_num)
                 end
-                ind = ind + 1;
             end
             data.(varname).data{ii} = data.(varname).data{ii}(:,1:chanIndex-1);
         end

@@ -63,9 +63,10 @@ for a=1:N
     pellets(a,1)        =   dat.Pellet;
 % end
 end
-sel                     =   pellets > 50;
+sel                     =   pellets > 0;
 DATA					=	[Trial Rate ModDur Resp Lat];
-DATA                    =   DATA(sel,:);
+% DATA                    =   DATA(sel,:);
+% DATA                    =   DATA(31:end,:);
 % rel						=	remind == 0;
 % DATA					=	DATA(rel,:);
 
